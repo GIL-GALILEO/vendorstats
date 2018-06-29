@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl
 #################################################################
 #  program: vendor_statsload.pl
 #   author: Mike Thomas
@@ -84,6 +84,8 @@
 #           Modified Ebsco for new file format
 #################################################################
 use strict;
+use warnings;
+
 use Getopt::Std;
 my $textfile_build = "no";
 my $ebsco_debug = "no";
@@ -95,10 +97,23 @@ chomp($today);
 my $backup_file="";
 use vars qw($opt_e $opt_p $opt_l $opt_b $opt_s $opt_f $opt_n $opt_y $opt_x $opt_c $opt_t $opt_o $opt_g $opt_u $opt_z);
 
+use lib 'perlib';
+use Text::CSV_PP;
+
 #################################################################
 # subroutine:
 #
 #################################################################
+
+#---------------------------------------------------------------------
+{ my $csv;
+sub csv_split {
+    my( $in ) = @_;
+
+    $csv = Text::CSV_PP->new( { binary => 1 } ) unless $csv;
+    $csv->parse( $in ) or die( "Can't parse line: ($in)".$csv->error_diag() );
+    $csv->fields();  # returned
+}}
 
 #################################################################
 # subroutine: get_options
@@ -1445,7 +1460,8 @@ sub proquest_stats_build {
 	open(INST,"$inst_data");
 	while(<INST>) {
 		$line = $_;
-		@vars = split /,/, $line;
+        # @vars = split /,/, $line;
+		@vars = csv_split( $line );
 		$vars[2] =~ tr/[a-z]/[A-Z]/;
 		## added 05/07/11 ##
 		$vars[0] =~ s/ //g;
@@ -1526,7 +1542,8 @@ sub proquest_stats_build {
 			if($count > 1){ ## this assumes that the first two lines areignored
 			$line = $_;
 			#@vars = split /",/, $line; # removed 4/21 due to change in data file
-			@vars = split /,/, $line;
+            # @vars = split /,/, $line;
+		    @vars = csv_split( $line );
 			$var_count = @vars;
 			for($i=0;$i<$var_count;$i++) {
 			  $value = $vars[$i];
@@ -1609,12 +1626,13 @@ sub proquest_stats_build {
 			while(<INFILE>){
 				$line = $_;
 				if ($line =~ /Subtotal/){
-					@vars = split /,"/, $line;
-					$vars[0] =~	s/"//g;
-					$vars[2] =~	s/"//g;
-					$vars[4] =~	s/"//g;
-					$vars[5] =~	s/"//g;
-					chomp($vars[5]);
+		            @vars = csv_split( $line );
+                    # @vars = split /,"/, $line;
+                    # $vars[0] =~	s/"//g;
+                    # $vars[2] =~	s/"//g;
+                    # $vars[4] =~	s/"//g;
+                    # $vars[5] =~	s/"//g;
+                    # chomp($vars[5]);
 					## searches $vars[2]
 					if (($vars[2] > 0) && (defined $inst_table{$vars[0]})){
 						$temp = $date . " " . $inst_table{$vars[0]} . " P Q ZUHQ " . $vars[2] . "\n";
@@ -1650,13 +1668,15 @@ sub proquest_stats_build {
 				if(($line=~/Account Subtotals/) && 
                                    ($tier_one_found)){
 					if($line=~/,"/){
-						@vars=split /,"/,$line;
-						$vars[1] =~ s/"//g;
-						$vars[2] =~ s/"//g;
-						$vars[3] =~ s/"//g;
-						$vars[4] =~ s/"//g;
+		                @vars = csv_split( $line );
+                        # @vars=split /,"/,$line;
+                        # $vars[1] =~ s/"//g;
+                        # $vars[2] =~ s/"//g;
+                        # $vars[3] =~ s/"//g;
+                        # $vars[4] =~ s/"//g;
 					} else {
-						@vars=split /,/,$line;
+		                @vars = csv_split( $line );
+                        # @vars=split /,/,$line;
 					} #end if
 					$vars[2] =~ tr/[a-z]/[A-Z]/;
 					$vars[2] =~ s/ //g;
@@ -1865,7 +1885,7 @@ sub proquest_stats_build {
 	`sort -m -o $fulltext_file $fulltext_file $temp_fulltext_file`;
 	system("gzip","$file");
 	$zip_file = $file . ".gz";
-	system("mv","$zip_file","$archive_dir");
+    #system("mv","$zip_file","$archive_dir");
 	$date_set=0;
 	} #end foreach
 } #end proquest_stats_build
@@ -2716,7 +2736,7 @@ sub sirs_stats_build {
 		`sort -m -o $sessions_file $sessions_file $temp_sessions_file`;
         	system("gzip","$file");
 		$zip_file = $file . ".gz";
-		system("mv","$zip_file","$archive_dir");
+        #system("mv","$zip_file","$archive_dir");
 	} #end foreach @data_files
 } #end sirs_stats_build
 
@@ -2828,7 +2848,7 @@ sub firstsearch_stats_build {
 		`sort -m -o $keyword_search_file $keyword_search_file $temp_keyword_search_file`;
 		system("gzip","$file");
 		$zip_file = $file . ".gz";
-		system("mv","$zip_file","$archive_dir");
+        #system("mv","$zip_file","$archive_dir");
 	} #end foreach @data_files
 
 } #end firstsearch_stats_build
@@ -3051,7 +3071,8 @@ sub learning_express_stats_build{
 		open(INFILE,"$file");
 		while(<INFILE>){
 			$line = $_;
-			@vars = split /,/,$line;
+	    	@vars = csv_split( $line );
+            #@vars = split /,/,$line;
 			if($past_top){
 				$vars[3] =~ tr/[a-z]/[A-Z]/;
 				$inst = $vars[3];
@@ -3134,8 +3155,9 @@ sub FOD_stats_build {
 	open(TECH_INST,"$tech_inst_code");
 	while(<TECH_INST>){
 		$line=$_;
-		@vars = split /,"/,$line;
-		$vars[2] =~ s/"//g;
+		@vars = csv_split( $line );
+        #@vars = split /,"/,$line;
+        #$vars[2] =~ s/"//g;
 		$vars[2] =~ tr/[a-z]/[A-Z]/;
 		$inst_code_data{$vars[0]}=$vars[2];
 	} #end while to read in Tech inst data
@@ -3145,8 +3167,9 @@ sub FOD_stats_build {
 	open(USG_INST,"$usg_inst_code");
 	while(<USG_INST>){
 		$line=$_;
-		@vars = split /,"/,$line;
-		$vars[2] =~ s/"//g;
+		@vars = csv_split( $line );
+        #@vars = split /,"/,$line;
+        #$vars[2] =~ s/"//g;
 		$vars[2] =~ tr/[a-z]/[A-Z]/;
 		$inst_code_data{$vars[0]}=$vars[2];
 	} #end while to read in Tech inst data
@@ -3180,11 +3203,12 @@ sub FOD_stats_build {
 			$line=$_;
 			if ($past_top){
 				#??# print"past top\n";
-				@vars=split /",/,$line;	
-				$vars[0] =~ s/"//g;
-				$vars[4] =~ s/"//g;
-				$vars[5] =~ s/"//g;
-				$vars[9] =~ s/"//g;
+		        @vars = csv_split( $line );
+                #@vars=split /",/,$line;	
+                #$vars[0] =~ s/"//g;
+                #$vars[4] =~ s/"//g;
+                #$vars[5] =~ s/"//g;
+                #$vars[9] =~ s/"//g;
 				if(defined($inst_code_data{$vars[0]})){
 					$inst=$inst_code_data{$vars[0]};
 					$sessions_count=$vars[4];
