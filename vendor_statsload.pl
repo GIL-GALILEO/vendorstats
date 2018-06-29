@@ -2599,7 +2599,8 @@ sub sirs_stats_build {
 	while(<ACADEM>){
 		$line=$_;
                 $line =~ s/"//g;
-		@vars = split /,/,$line;
+	    @vars = csv_split( $line );
+        #@vars = split /,/,$line;
 		$vars[1] =~ tr/[a-z]/[A-Z]/;
 		chomp($vars[1]);
 		chomp($vars[2]);
@@ -2609,7 +2610,8 @@ sub sirs_stats_build {
 	while(<K12>){
 		$line=$_;
                 $line =~ s/"//g;
-		@vars = split /,/,$line;
+	    @vars = csv_split( $line );
+        #@vars = split /,/,$line;
 		$vars[1] =~ tr/[a-z]/[A-Z]/;
 		chomp($vars[1]);
 		chomp($vars[2]);
@@ -2618,7 +2620,8 @@ sub sirs_stats_build {
 	while(<MISSING>){
 		$line=$_;
                 $line =~ s/"//g;
-		@vars = split /,/,$line;
+	    @vars = csv_split( $line );
+        #@vars = split /,/,$line;
 		$vars[2] =~ tr/[a-z]/[A-Z]/;
 		chomp($vars[0]);
 		chomp($vars[2]);
@@ -2655,7 +2658,8 @@ sub sirs_stats_build {
 			$line=$_;
                         $line =~ s/"//g;
 			if ($header_found){
-				@vars = split /,/,$line;
+	            @vars = csv_split( $line );
+                #@vars = split /,/,$line;
 				$length = @vars;
 				$inst_code = $vars[1];
 				if((exists ($inst_code_lookup{$inst_code})) && $length>=26){
@@ -2742,8 +2746,8 @@ sub sirs_stats_build {
 		`sort -m -o $fulltext_file $fulltext_file $temp_fulltext_file`;
 		`sort -m -o $citation_file $citation_file $temp_citation_file`;
 		`sort -m -o $sessions_file $sessions_file $temp_sessions_file`;
-        	system("gzip","$file");
-		$zip_file = $file . ".gz";
+        #system("gzip","$file");
+        #$zip_file = $file . ".gz";
         #system("mv","$zip_file","$archive_dir");
 	} #end foreach @data_files
 } #end sirs_stats_build
@@ -3477,12 +3481,13 @@ sub galelf_stats_build{
 	open(INST,"$inst_key_file");
 	while(<INST>){
 		$line=$_;
-		@vars = split /,"/,$line;
-		$vars[0] =~ s/"//g;
-		$vars[1] =~ s/"//g;
-		$vars[2] =~ s/"//g;
-		chomp($vars[2]);
-		$vars[2] =~ s/,//g;
+		@vars = csv_split( $line );
+        #@vars = split /,"/,$line;
+        #$vars[0] =~ s/"//g;
+        #$vars[1] =~ s/"//g;
+        #$vars[2] =~ s/"//g;
+        #chomp($vars[2]);
+        #$vars[2] =~ s/,//g;
 		$vars[0] =~ tr/[a-z]/[A-Z]/;
 		$vars[2] =~ tr/[a-z]/[A-Z]/;
 		$vars[0] =~ s/ //g;
@@ -3499,25 +3504,34 @@ sub galelf_stats_build{
 		$date=$temp;
 		$temp="";
 		chomp($date);
+
 		# get date from files
-		if ($date =~ /Gale/){
+		if ($date =~ /_Gale/){
 			$date =~ s/_GaleLegalForms.csv//;
 			#$date =~ s/.csv//;
-		} else {
+		}
+        elsif ( $date =~/^Gale/ ) {
+			$date =~ s/GaleLegalForms_//;
+			$date =~ s/.csv//;
+		}
+        else {
 			print "Check file name format. Date not found.\n";
 			exit;
 		} # end if to find date
+
 		$date = "m".$date;
 		#??#print"date=$date\n";
 		open(SESSIONS, ">$temp_sessions_file");
 		open(INFILE,"$file");
 		while(<INFILE>){
 			$line=$_;
+            $line =~ s{\r\n$}{\n};
 			chomp($line);
 			$sessions_count=0;
 			if ($past_top){
 				#??# print"past top\n";
-				@vars=split /,/,$line;	
+		        @vars = csv_split( $line );
+                #@vars=split /,/,$line;	
 				$vars[0] =~ tr/[a-z]/[A-Z]/;
 				$vars[0] =~ s/ //g;
 				if(defined($inst_code_data{$vars[0]})){
