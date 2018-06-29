@@ -3559,12 +3559,13 @@ sub tumblecloud_stats_build{
 	open(INST,"$inst_key_file");
 	while(<INST>){
 		$line=$_;
-		@vars = split /,"/,$line;
-		$vars[0] =~ s/"//g;
-		$vars[1] =~ s/"//g;
-		$vars[2] =~ s/"//g;
-		chomp($vars[2]);
-		$vars[2] =~ s/,//g;
+		@vars = csv_split( $line );
+        #@vars = split /,"/,$line;
+        #$vars[0] =~ s/"//g;
+        #$vars[1] =~ s/"//g;
+        #$vars[2] =~ s/"//g;
+        #chomp($vars[2]);
+        #$vars[2] =~ s/,//g;
 		$vars[0] =~ tr/[a-z]/[A-Z]/;
 		$vars[2] =~ tr/[a-z]/[A-Z]/;
 		$vars[0] =~ s/ //g;
@@ -3599,7 +3600,8 @@ sub tumblecloud_stats_build{
 			$fulltext_count=0;
 			if ($past_top){
 				print"past top\n";
-				@vars=split /,/,$line;	
+		        @vars = csv_split( $line );
+                #@vars=split /,/,$line;	
 				$vars[0] =~ tr/[a-z]/[A-Z]/;
 				$vars[0] =~ s/ //g;
 				if(defined($inst_code_data{$vars[0]})){
