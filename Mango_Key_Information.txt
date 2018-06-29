@@ -3,7 +3,7 @@
 "Augusta-Richmond County Public Library","ecg1","Augusta-Richmond County Public Library"
 "Bartow County Library System","car1","Bartow County Library System"
 "Bartram Trail Regional Library System","btr1","Bartram Trail Regional Library System"
-"Board of Regents of the University System of Georgia / GALILEO",,"IGNORE"
+"Board of Regents of the University System of Georgia / GALILEO","oit1","University System Office"
 "Brooks County Library","bcl1","Brooks County Library"
 "Catoosa County Public Library System","bcat","Catoosa County Public Library System"
 "Chattahoochee Valley Libraries","cht1","Chattahoochee Valley Libraries"
