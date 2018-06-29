@@ -2980,11 +2980,12 @@ sub ebookcentral_stats_build {
 	open(INSTDATA,"ebookcentral_stats_institutions.txt");
 	while (<INSTDATA>) {
 		$line=$_;
-		@vars = split /",/,$line;
+	    @vars = csv_split( $line );
+        #@vars = split /",/,$line;
 		$vars[0] =~ tr/[a-z]/[A-Z]/;
 		$vars[1] =~ tr/[a-z]/[A-Z]/;
-		$vars[0] =~ s/"//g;
-		$vars[1] =~ s/"//g;
+        #$vars[0] =~ s/"//g;
+        #$vars[1] =~ s/"//g;
 		$vars[1] =~ s/ //g;
 		chomp($vars[0]);
 		chomp($vars[1]);
@@ -3008,7 +3009,8 @@ sub ebookcentral_stats_build {
 		while(<INFILE>){
 			$line=$_;
 			#print"$line\n";
-			@vars = split /,/,$line;		
+	        @vars = csv_split( $line );
+            #@vars = split /,/,$line;		
 			$vars[0] =~ tr/[a-z]/[A-Z]/;
 			$vars[0] =~ s/ //g;
 			$inst=$inst_code_lookup{$vars[0]};
