@@ -2293,7 +2293,8 @@ sub britannica_stats_build {
 			$line = $_;
 			if ((($line =~ /\[/) || ($line =~ /\(/))
 		 && (($line =~ /SubTotals:/) || ($line =~ /Subtotals:/))){
-				@vars = split /,/,$line;
+	            @vars = csv_split( $line );
+                #@vars = split /,/,$line;
 				if($vars[0] =~ /\[/){
 					@inst_code = split /\[/,$vars[0];
 					$inst_code[1] =~ s/]//g;
@@ -2480,12 +2481,19 @@ sub britannica_stats_build {
 		      		$inst="psbf";$inst_found=1;
 				} elsif ($line =~ /SCHENCK SCHOOL/){
 		      		$inst="pssc";$inst_found=1;
+				} elsif ($line =~ /Emory University - emu1/){
+		      		$inst="emu1";$inst_found=1;
 		    	  	} #end if
 				
 				if ($inst_found){
-					@vars = split /,/,$line;
+	                @vars = csv_split( $line );
+                    #@vars = split /,/,$line;
 					$inst =~ tr/[a-z]/[A-Z]/;
 				} #end if inst_found true
+                else {
+                    print "Inst not found\n";
+                    print $line;
+                }
 			} #end if
 			$tmp="";
 			$inst_found=0;
