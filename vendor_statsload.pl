@@ -1014,7 +1014,7 @@ sub ebsco_stats_build {
 	
 	my ($date,$line,$out_line,$out_line_head,$out_line_tail,
 		$inst_code,$zip_file,$file_name,$db_code,$profile,$last_inst)="";
-	my ($searches_total,$citation_total,$fulltext_total,$size,$inst_defined,$searches_count,$fulltext_count,$citation_count,$temp_sessions_total,$sessions_total,$temp_searches_total,$sessions_count,$array_var)=0;
+	my ($searches_total,$citation_total,$fulltext_total,$size,$inst_defined,$searches_count,$fulltext_count,$citation_count,$temp_sessions_total,$sessions_total,$temp_searches_total,$sessions_count)=0;
 	my $db_file = $data_dir."/stats/EBSCO_dbs.txt";
 	my $eds_academic = $data_dir."stats/EBSCO_EDS_Academic.txt";
 	my $eds_gpls_k12_priv12 = $data_dir."stats/EBSCO_EDS_GPLS_K12_Privk12.txt";
@@ -1031,9 +1031,10 @@ sub ebsco_stats_build {
 	### barcket check
 	while(<INFILE>){
 	  $line=$_;
-	  @fields = split /,/,$line;   
+	  @fields = csv_split( $line );
+      #@fields = split /,/,$line;   
 	  $fields[0] =~ tr/[a-z]/[A-Z]/;
-	  $fields[1] =~ s/"//g;
+      #$fields[1] =~ s/"//g;
 	  $fields[1] =~ s/ //g;
 	  $fields[1] =~ tr/[a-z]/[A-Z]/;
 	  chomp($fields[0]);
@@ -1054,7 +1055,8 @@ sub ebsco_stats_build {
 	### bracket Check
 	while(<EHOSTINST>){
 		$line=$_;
-		@fields = split /,/,$line;   
+	    @fields = csv_split( $line );
+        #@fields = split /,/,$line;   
 		$fields[0] =~ tr/[a-z]/[A-Z]/;
 		$fields[1] =~ s/ //g;
 		$fields[1] =~ tr/[a-z]/[A-Z]/;
@@ -1090,11 +1092,12 @@ sub ebsco_stats_build {
 	open(EBSCOPROFILES,"$ebsco_profiles");
 	while(<EBSCOPROFILES>){ 
 		$line=$_;
-		@fields = split /,/,$line;   
+	    @fields = csv_split( $line );
+        #@fields = split /,/,$line;   
 		$fields[0] =~ tr/[a-z]/[A-Z]/;
-		$fields[0] =~ s/"//g;
+        #$fields[0] =~ s/"//g;
 		$fields[0] =~ s/ //g;
-		$fields[1] =~ s/"//g;
+        #$fields[1] =~ s/"//g;
 		$fields[1] =~ s/ //g;
 		$fields[1] =~ tr/[a-z]/[A-Z]/;
 		chomp($fields[0]);
@@ -1136,7 +1139,8 @@ sub ebsco_stats_build {
 
 			while(<EDSDBFILE>){
 				$line=$_;
-				@fields = split /,/,$line;   
+	            @fields = csv_split( $line );
+                #@fields = split /,/,$line;   
 				$fields[0] =~ tr/[a-z]/[A-Z]/;
 				$fields[1] =~ s/ //g;
 				$fields[1] =~ tr/[a-z]/[A-Z]/;
@@ -1153,20 +1157,12 @@ sub ebsco_stats_build {
 				#??#print"past_top=$past_top\n";
 			if($past_top){
 				#??#print"past_top=$past_top\n";
-				if($line =~ /",/){
+                #if($line =~ /",/){
 					$line =~ s/ //g;
 					$line =~ tr/[a-z]/[A-Z]/;
-					#??#print"line=$line\n";
-					@fields = split /",/,$line;
-					$fields[0] =~ s/\"//g;
-					$fields[1] =~ s/\"//g;
-					$fields[3] =~ s/\"//g;
-					$array_var=$fields[$#fields]; ## assign last element in array to array_var
-					#$array_var = $fields[9];
-					#??#print "array_var=$array_var\n";
-					@values = split /,/,$array_var;
-					@values = grep { $_ ne '' } @values; ## get rid of blank elements in array
-				} #end if
+	                @fields = csv_split( $line );
+					@values = @fields[ 9 ..$#fields ];  # historical reasons
+                #} #end if
 
 				### bracket check
 				if($eds_keys{$fields[0]}){
@@ -1220,20 +1216,18 @@ sub ebsco_stats_build {
 				$searches_count=0;
 				}#end if	
 				### bracket check OK
-			} elsif ($line =~ /"Customer ID"/){
+			} elsif ($line =~ /Customer ID/){
 				$past_top=1;
 			} #end if past top
 			} #end while lines of data in file to process
 			### bracket check OK	
 
 		} elsif ($file_name =~ /eHost/){
-		#??#exit; #uncomment to test EDS harvest
 			$date = $file_name;
 			$date =~ s/eHost_Full-Text_Citations_//;
 			$date =~ s/eHost_Searches_Sessions_//;
 			$date =~ s/.csv//;
 			$date =~ s/.CSV//;
-			#$date = "m".$date;
 			$past_top=0;
 			print"opening $file_name\n";
 			open(INFILE,"$file");
@@ -1243,31 +1237,17 @@ sub ebsco_stats_build {
 				$inst_defined=0;
 				$inst_code="";
 				$db_code="";
-				### bracket check
 			if ($past_top) {
 				$line =~ s/ //g;
 				$line =~ tr/[a-z]/[A-Z]/;
-				#??#print"in-line=$line\n";
-				@fields = split /",/,$line;
-				$fields[0] =~ s/\"//g;
-				$fields[1] =~ s/\"//g;
-				$fields[2] =~ s/\"//g;
-				$fields[3] =~ s/\"//g;
-				$fields[4] =~ s/\"//g;
+	            @fields = csv_split( $line );
 				if ($file_name =~ /eHost_Searches/){
-					#$array_var = $fields[9];
-					#??#print"array_var from search if=$array_var\n";
 					$db_code=$ebsco_titles{$fields[4]};
-					#??#print"db_code from search if=$db_code\n";
+				    @values = @fields[ 9 .. $#fields ];  # historical reasons
 				} else {
-					#$array_var = $fields[7];
 					$db_code=$ebsco_titles{$fields[2]};
-				} #end if				
-				$array_var=$fields[$#fields]; ## assign last element in array to array_var
-				@values = split /,/,$array_var;
-				@values = grep { $_ ne '' } @values; ## get rid of blank elements in array
-				#??#print"db_code=$db_code\n";
-				### bracket check
+				    @values = @fields[ 7 .. $#fields ];  # historical reasons
+				}
 				if(($ehost_keys{$fields[0]})
 			 	&& ($file_name =~ /eHost_Searches/)){
 					$inst_code = $ehost_keys{$fields[0]};
@@ -1338,7 +1318,7 @@ sub ebsco_stats_build {
 				$fulltext_count=0;
 				$citation_count=0;
 				### bracket check OK
-			} elsif ($line =~ /"Customer ID"/){
+			} elsif ($line =~ /Customer ID/){
 				$past_top=1;
 			} #end if
 		} #end while
