@@ -163,7 +163,6 @@ sub is_float {
 sub old_ebsco_stats_build {
 	my $ebsco_textfile_build = @_;
 	$backup_file="";
-	my $archive_dir = $data_dir . "archive/ebsco_archive";
 	my $temp_searches_file = $data_dir."stats/temp_stats_monthly_ebsco_search_data";
 	my $temp_citation_file = $data_dir."stats/temp_stats_monthly_ebsco_citation_data";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_ebsco_fulltext_data";
@@ -953,9 +952,6 @@ sub old_ebsco_stats_build {
 			`sort -o $temp_searches_file $temp_searches_file`;		
 			`sort -o $temp_citation_file $temp_citation_file`;
 			`sort -o $temp_fulltext_file $temp_fulltext_file`;
-			system("gzip","$file");
-			$zip_file = $file . ".gz";
-			#system("mv","$zip_file","$archive_dir");
 		} #end if to process new format data - files with EDS
 		$file_name="";
 		@fields=();
@@ -1001,7 +997,6 @@ sub old_ebsco_stats_build {
 #################################################################
 sub ebsco_stats_build {
 	$backup_file="";
-	my $archive_dir = $data_dir . "archive/ebsco_archive";
 	my $temp_searches_file = $data_dir."stats/temp_stats_monthly_ebsco_search_data";
 	my $temp_citation_file = $data_dir."stats/temp_stats_monthly_ebsco_citation_data";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_ebsco_fulltext_data";
@@ -1330,9 +1325,6 @@ sub ebsco_stats_build {
 		`sort -o $temp_searches_file $temp_searches_file`;		
 		`sort -o $temp_citation_file $temp_citation_file`;
 		`sort -o $temp_fulltext_file $temp_fulltext_file`;
-		#system("gzip","$file");
-		#$zip_file = $file . ".gz";
-		#system("mv","$zip_file","$archive_dir");
 		} #end if to process new format data - files with EDS
 		$file_name="";
 		@fields=();
@@ -1376,7 +1368,6 @@ sub ebsco_stats_build {
 #################################################################
 sub proquest_stats_build {
 	my $proquest_textfile_build = @_;
-	my $archive_dir = $data_dir . "archive/proquest_archive";
 	my $temp_searches_file = $data_dir."stats/temp_stats_monthly_proquest_search_data";
 	my $temp_citation_file = $data_dir."stats/temp_stats_monthly_proquest_citation_data";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_proquest_fulltext_data";
@@ -1863,9 +1854,6 @@ sub proquest_stats_build {
 	`sort -m -o $searches_file $searches_file $temp_searches_file`;
 	`sort -m -o $citation_file $citation_file $temp_citation_file`;
 	`sort -m -o $fulltext_file $fulltext_file $temp_fulltext_file`;
-	system("gzip","$file");
-	$zip_file = $file . ".gz";
-    #system("mv","$zip_file","$archive_dir");
 	$date_set=0;
 	} #end foreach
 } #end proquest_stats_build
@@ -1875,7 +1863,6 @@ sub proquest_stats_build {
 #             builds the stat files from Lexis-Nexis data
 #################################################################
 sub lexis_nexis_stats_build {
-	my $archive_dir = $data_dir . "archive/lexis_nexis_archive";
 	my $temp_searches_file = $data_dir."stats/temp_stats_monthly_lexis_nexis_search_data";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_lexis_nexis_fulltext_data";
 	my $temp_sessions_file = $data_dir."stats/temp_stats_monthly_lexis_nexis_sessions_data";
@@ -2132,9 +2119,6 @@ sub lexis_nexis_stats_build {
 		`sort -m -o $searches_file $searches_file $temp_searches_file`;
 		`sort -m -o $fulltext_file $fulltext_file $temp_fulltext_file`;
 		`sort -m -o $sessions_file $sessions_file $temp_sessions_file`;
-	#	system("gzip","$file");
-	#	$zip_file = $file . ".gz";
-	#	system("mv","$zip_file","$archive_dir");
 	} #end foreach data file
 } #end lexis_nexis_stats_build
 
@@ -2143,7 +2127,6 @@ sub lexis_nexis_stats_build {
 #             for the Enclyopedia Britannica.
 #################################################################
 sub britannica_stats_build {
-	my $archive_dir = $data_dir . "archive/britannica_archive";
 	my $temp_searches_file = $data_dir."stats/temp_stats_monthly_britannica_search_data";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_britannica_fulltext_data";
 	#my $searches_file = $data_dir."stats/stats_monthly_britannica_search_data";
@@ -2518,9 +2501,6 @@ sub britannica_stats_build {
 		`sort -o $temp_fulltext_file $temp_fulltext_file`;
 		`sort -m -o $searches_file $searches_file $temp_searches_file`;
 		`sort -m -o $fulltext_file $fulltext_file $temp_fulltext_file`;
-		#system("gzip","$file");
-		#$zip_file = $file . ".gz";
-		#system("mv","$zip_file","$archive_dir");
 	} #end foreach
 } #end britannica_stats_build
 
@@ -2528,7 +2508,6 @@ sub britannica_stats_build {
 # subroutine: sirs_stats_build
 #################################################################
 sub sirs_stats_build {
-	my $archive_dir = $data_dir . "archive/sirs_archive";
 	my $temp_citation_file = $data_dir."stats/temp_stats_monthly_sirs_citation_data";
 	my $temp_keyword_search_file = $data_dir."stats/temp_stats_monthly_sirs_keyword_search_data";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_sirs_fulltext_data";
@@ -2726,9 +2705,6 @@ sub sirs_stats_build {
 		`sort -m -o $fulltext_file $fulltext_file $temp_fulltext_file`;
 		`sort -m -o $citation_file $citation_file $temp_citation_file`;
 		`sort -m -o $sessions_file $sessions_file $temp_sessions_file`;
-        #system("gzip","$file");
-        #$zip_file = $file . ".gz";
-        #system("mv","$zip_file","$archive_dir");
 	} #end foreach @data_files
 } #end sirs_stats_build
 
@@ -2736,7 +2712,6 @@ sub sirs_stats_build {
 # subroutine: firstsearch_stats_build
 #################################################################
 sub firstsearch_stats_build {
-	my $archive_dir = $data_dir . "archive/firstsearch_archive";
 	my $temp_keyword_search_file = $data_dir."stats/temp_stats_monthly_firstsearch_keyword_search_data";
 	#my $keyword_search_file = $data_dir."stats/stats_monthly_firstsearch_keyword_search_data";
 	my $keyword_search_file = $data_dir."stats/stats_monthly_firstsearch_keyword_search_data_new";
@@ -2838,9 +2813,6 @@ sub firstsearch_stats_build {
 		close(INFILE);
 		`sort -o $temp_keyword_search_file $temp_keyword_search_file`;
 		`sort -m -o $keyword_search_file $keyword_search_file $temp_keyword_search_file`;
-		system("gzip","$file");
-		$zip_file = $file . ".gz";
-        #system("mv","$zip_file","$archive_dir");
 	} #end foreach @data_files
 
 } #end firstsearch_stats_build
@@ -2850,7 +2822,6 @@ sub firstsearch_stats_build {
 # subroutine: ebrary_stats_build
 #################################################################
 sub ebrary_stats_build {
-	my $archive_dir = $data_dir . "archive/ebrary_archive";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_ebrary_fulltext_data";
 	my $fulltext_file = $data_dir."stats/stats_monthly_ebrary_fulltext_data_new";
 	my $temp_sessions_file = $data_dir."stats/temp_stats_monthly_ebrary_sessions_data";
@@ -2953,7 +2924,6 @@ sub ebrary_stats_build {
 # subroutine: ebookcentral_stats_build
 #################################################################
 sub ebookcentral_stats_build {
-	my $archive_dir = $data_dir . "archive/ebookcentral_archive";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_ebookcentral_fulltext_data";
 	my $fulltext_file = $data_dir."stats/stats_monthly_ebookcentral_fulltext_data_new";
   	my $raw_data_dir = $data_dir . "ftp/galileo_stats/ebookcentral";	
@@ -3029,7 +2999,6 @@ sub ebookcentral_stats_build {
 # subroutine learning_express_stats_build
 #################################################################
 sub learning_express_stats_build{
-	my $archive_dir = $data_dir . "archive/learning_express_archive";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_learning_express_fulltext_data";
 	my $fulltext_file = $data_dir."stats/stats_monthly_learning_express_fulltext_data_new";
 	my $temp_sessions_file = $data_dir."stats/temp_stats_monthly_learning_express_sessions_data";
@@ -3116,7 +3085,6 @@ sub learning_express_stats_build{
 #################################################################
 sub FOD_stats_build {
 	print "FOD_stats_build called\n";
-	my $archive_dir = $data_dir . "archive/films_on_demand_archive";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_films_on_demand_fulltext_data";
 	my $fulltext_file = $data_dir."stats/stats_monthly_films_on_demand_fulltext_data_new";
 	my $temp_sessions_file = $data_dir."stats/temp_stats_monthly_films_on_demand_sessions_data";
@@ -3252,7 +3220,6 @@ sub FOD_stats_build {
 sub tumblebooks_stats_build{
 
 	print "tumblebooks_stats_build called\n";
-	my $archive_dir = $data_dir . "archive/tumblebooks_archive";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_tumblebooks_fulltext_data";
 	my $fulltext_file = $data_dir."stats/stats_monthly_tumblebooks_fulltext_data_new";
 	my $inst_code = $data_dir."stats/TumbleBooks_Stats_Key.csv";
