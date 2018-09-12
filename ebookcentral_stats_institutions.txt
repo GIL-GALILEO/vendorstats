@@ -10,7 +10,7 @@
 "ath2","Athens Technical College"
 "satk","Atkinson County Schools"
 "hatl","Atlanta Area School for the Deaf"
-"satl","Atlanta City Schools"
+"satl","Atlanta Public Schools"
 "psat","Atlanta Girls' School"
 "ahc1","Atlanta History Center"
 "atl1","Atlanta Metropolitan State College"
