@@ -503,7 +503,6 @@ sub ebsco_stats_build {
 	close(FULLTEXT);
 	close(SESSIONS);
 	close(INFILE);
-	close(LOGFILE);
 	close(DEBUG);
 	#if ($ebsco_textfile_build eq "yes") {
 	#	open(OUT,">ebsco_db_names.txt");
