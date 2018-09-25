@@ -349,7 +349,7 @@
 "1P South Georgia Regional Library System","sgr1","sgr1",
 "1P Southwest Georgia Regional Library System","sou1","sou1",
 "1P Statesboro Regional Library System","bor1","bor1",
-"1P Thomas County Public Library","tcpls","tcpls",
+"1P Thomas County Public Library","tcpls","tcp1",
 "1P Three Rivers Regional Library System","bgr1","bgr1",
 "1P Troup-Harris-Coweta Regional Library System","thc1","thc1",
 "1P Twin Lakes Library System","lake","lake",
