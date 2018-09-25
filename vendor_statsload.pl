@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl
 #################################################################
 #  program: vendor_statsload.pl
 #   author: Mike Thomas
@@ -84,6 +84,8 @@
 #           Modified Ebsco for new file format
 #################################################################
 use strict;
+use warnings;
+
 use Getopt::Std;
 my $textfile_build = "no";
 my $ebsco_debug = "no";
@@ -95,10 +97,23 @@ chomp($today);
 my $backup_file="";
 use vars qw($opt_e $opt_p $opt_l $opt_b $opt_s $opt_f $opt_n $opt_y $opt_x $opt_c $opt_t $opt_o $opt_g $opt_u $opt_z);
 
+use lib 'perlib';
+use Text::CSV_PP;
+
 #################################################################
 # subroutine:
 #
 #################################################################
+
+#---------------------------------------------------------------------
+{ my $csv;
+sub csv_split {
+    my( $in ) = @_;
+
+    $csv = Text::CSV_PP->new( { binary => 1 } ) unless $csv;
+    $csv->parse( $in ) or die( "Can't parse line: ($in)".$csv->error_diag() );
+    $csv->fields();  # returned
+}}
 
 #################################################################
 # subroutine: get_options
@@ -142,851 +157,11 @@ sub is_float {
 }
 
 #################################################################
-# subroutine: old_ebsco_stats_build
-#             strips out the unique db names from the EBSCO report.
-#################################################################
-sub old_ebsco_stats_build {
-	my $ebsco_textfile_build = @_;
-	$backup_file="";
-	my $archive_dir = $data_dir . "archive/ebsco_archive";
-	my $temp_searches_file = $data_dir."stats/temp_stats_monthly_ebsco_search_data";
-	my $temp_citation_file = $data_dir."stats/temp_stats_monthly_ebsco_citation_data";
-	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_ebsco_fulltext_data";
-	my $temp_sessions_file = $data_dir."stats/temp_stats_monthly_ebsco_sessions_data";
-	#my $searches_file = $data_dir."stats/stats_monthly_ebsco_search_data";
-	#my $searches_file = $data_dir."stats/stats_monthly_ebsco_search_data_new_format";
-	my $searches_file = $data_dir."stats/stats_monthly_ebsco_search_data_new_format_temp";
-	#my $citation_file = $data_dir."stats/stats_monthly_ebsco_citation_data";
-	#my $citation_file = $data_dir."stats/stats_monthly_ebsco_citation_data_new_format";
-	my $citation_file = $data_dir."stats/stats_monthly_ebsco_citation_data_new_format_temp";
-	#my $fulltext_file = $data_dir."stats/stats_monthly_ebsco_fulltext_data";
-	#my $fulltext_file = $data_dir."stats/stats_monthly_ebsco_fulltext_data_new_format";
-	my $fulltext_file = $data_dir."stats/stats_monthly_ebsco_fulltext_data_new_format_temp";
-	#my $sessions_file = $data_dir."stats/stats_monthly_ebsco_sessions_data";
-	#my $sessions_file = $data_dir."stats/stats_monthly_ebsco_sessions_data_new_format";
-	my $sessions_file = $data_dir."stats/stats_monthly_ebsco_sessions_data_new_format_temp";
-	my $debug_file = $data_dir."stats/EBSCO_debug.txt";
-	
-	my $log_file = $data_dir."/stats/ebsco_log.txt";
-	my $orphan_file = $data_dir."/stats/ebsco_orphans.txt";
-	my ($date,$line,$out_line,$out_line_head,$out_line_tail,
-		$inst_code,$zip_file,$file_name,$db_code,$profile,$last_inst)="";
-	my ($start,$searches_total,$citation_total,$fulltext_total,$size,$inst_defined,$searches_count,
-            $fulltext_count,$citation_count,$temp_sessions_total,$sessions_total,$temp_searches_total,
-            $sessions_count,$array_var)=0;
-	my $db_file = $data_dir."/stats/EBSCO_dbs.txt";
-	#my $private_k12 = $data_dir."stats/EBSCO_PrivateK12.csv";
-	my $eds_academic = $data_dir."stats/EBSCO_EDS_Academic.txt";
-	my $eds_gpls_k12_priv12 = $data_dir."stats/EBSCO_EDS_GPLS_K12_Privk12.txt";
-	my $ebsco_profiles = $data_dir."stats/EBSCO_EDS_Profiles.txt";
-	my $ehost_inst_data = $data_dir."stats/EBSCO_inst_combined.txt";
-
-	my @fields=();
-	my @vars=();
-	my %ebsco_titles=();
-	open(INFILE,"$db_file");
-	### barcket check
-	while(<INFILE>){
-	  $line=$_;
-	  @fields = split /,/,$line;   
-	  $fields[0] =~ tr/[a-z]/[A-Z]/;
-	  $fields[1] =~ s/"//g;
-	  $fields[1] =~ s/ //g;
-	  $fields[1] =~ tr/[a-z]/[A-Z]/;
-	  chomp($fields[0]);
-	  chomp($fields[1]);
-	  ## handle diacritics and embeded commas
-	  SWITCH: {
-	  	if($line =~ /Fuente Acad/){ $fields[1]="FUENTEACAD"; last SWITCH; }
-		if($line =~ /Econom/){ $fields[1]="ECONOM"; last SWITCH; }
-	  	if($line =~ /Revistas de Investigaci/){ $fields[1] = "REVISTASDEINVESTIGACI"; last SWITCH;}
-      	if($line =~ /Revistas para Bibliotecas/){ $fields[1]="REVISTASPARABIBLIOTECAS"; last SWITCH; }
-	  if($line =~ /Salud: Informaci/){ $fields[1] = "SALUD:INFORMACI"; last SWITCH; }
-	  if ($line =~ /Garden, Landscape/){ $fields[0] = "ZBGA"; $fields[1]="GARDENLANDSCAPE"; last SWITCH; }
-	  if (($line =~ /Library, Information Science/)
-		   && ($line !~ /Full Text/)){ $fields[0] = "ZBLI"; $fields[1]="LIBRARYINFORMATIONSCIENCE"; last SWITCH;
-		} elsif($line =~ /Library, Information Science/) { $fields[0]="ZBLF"; $fields[1]="LIBRARYINFORMATIONSCIENCEFULLTEXT"; last SWITCH; }
-	  } #end SWITCH
-	  $ebsco_titles{$fields[1]}=$fields[0];
-	} #end while to read in db code and name
-	### bracket check OK
-
-	@fields=();	
-
-	my %db_names = ();
-	my %eds_keys = ();
-	my %ebsco_profiles = ();
-	my %ehost_keys = ();
-
-	open(EHOSTINST,"$ehost_inst_data");	
-	@fields=();	
-
-	my %special_inst_codes = (
-	"GALILEO" => "DEM4",
-	"JEFF" => "SJFF",
-	"TWIN" => "LAKE",
-	"S3861631" => "SFOA",
-	"S9426913" => "SBAA",
-	"S9438553" => "SFUL",
-	"S9052584" => "PUB1",
-	"1-AUG" => "AUG1");
-	
-	### bracket Check
-	while(<EHOSTINST>){
-		$line=$_;
-		@fields = split /,/,$line;   
-		$fields[0] =~ tr/[a-z]/[A-Z]/;
-		#$fields[1] =~ s/ //g;
-		#$fields[1] =~ tr/[a-z]/[A-Z]/;
-		chomp($fields[0]);
-		chomp($fields[1]);
-		$ehost_keys{$fields[1]}=$fields[0];
-	}#end while reading lines from files
-	### bracket check OK
-	close(EHOSTINST);
-
-  	my $raw_data_dir = $data_dir . "ftp/galileo_stats/new_ebsco_stats";	
-	my @data_files = <$raw_data_dir/*>;
-
-	#??#foreach my $var(@data_files){
-	#??#	print"datafile=$var\n";
-	#??#} #end foreach 
-	#??#exit;	
-
-	#####  Make back-ups  #####
-	if ((-e $searches_file) && (!($opt_n))) {
-		system("$makebak","$searches_file");
-	}
-	if ((-e $fulltext_file) && (!($opt_n))) {
-		system("$makebak","$fulltext_file");
-	}
-	if ((-e $citation_file) && (!($opt_n))) {
-		system("$makebak","$citation_file");
-	}
-	if ((-e $sessions_file) && (!($opt_n))) {
-		system("$makebak","$sessions_file");
-	}
-	#??# exit;
-	open(EBSCOPROFILES,"$ebsco_profiles");
-		while(<EBSCOPROFILES>){
-			$line=$_;
-			@fields = split /,/,$line;   
-			$fields[0] =~ tr/[a-z]/[A-Z]/;
-			$fields[1] =~ s/ //g;
-			$fields[1] =~ tr/[a-z]/[A-Z]/;
-			chomp($fields[0]);
-			chomp($fields[1]);
-			#??#print"fields[0]=$fields[0]\nfields[1]=$fields[1]\n";
-			$ebsco_profiles{$fields[0]}=$fields[1];
-		}#end while reading lines from files
-	close(EBSCOPROFILES);
-	#??#exit;
-	open(SEARCHES,">$temp_searches_file");
-	open(SESSIONS,">$temp_sessions_file");
-	open(CITATION,">$temp_citation_file");
-	open(FULLTEXT,">$temp_fulltext_file");
-	open(DEBUG,">$debug_file");
-
-	foreach my $file(@data_files) {
-		$file_name = $file;
-		$file_name =~ s/\/ss\/dbs\/stats\/ftp\/galileo_stats\/new_ebsco_stats\///;
-		print "loading $file_name\n";
-		print DEBUG $file_name."\n";
-		if ($file_name =~ /EDS_/){
-			$date = $file_name;
-			$date =~ s/EDS_Academic_//;
-			$date =~ s/EDS_GPLS_K12_Privk12_//;
-			$date =~ s/.csv//;
-			$date =~ s/.CSV//;
-			#??#print "date=$date\n";
-			open(INFILE,"$file");
-
-			### bracket check
-			if ($file_name =~ /Academic/){
-				open(EDSDBFILE,"$eds_academic");
-				print"opening $eds_academic\n";
-			} elsif ($file_name =~ /GPLS/){
-				open(EDSDBFILE,"$eds_gpls_k12_priv12");
-				print"opening $eds_gpls_k12_priv12\n";
-			}#end if
-			### bracket check OK	
-
-			%eds_keys=();
-
-			### barcket check
-			while(<EDSDBFILE>){
-				$line=$_;
-				@fields = split /,/,$line;   
-				$fields[0] =~ tr/[a-z]/[A-Z]/;
-				$fields[1] =~ s/ //g;
-				$fields[1] =~ tr/[a-z]/[A-Z]/;
-				chomp($fields[0]);
-				chomp($fields[1]);
-				$eds_keys{$fields[1]}=$fields[0];
-			}#end while reading lines from files
-			### bracket check OK
-
-			@fields=();	
-			close(EDSDBFILE);
-			### bracket check
-			while(<INFILE>){
-				$line=$_;
-				$line =~ s/ //g;
-				$line =~ tr/[a-z]/[A-Z]/;
-
-				### bracket check - 313
-				if($line =~ /",/){
-					@fields = split /,/,$line;
-					$fields[0] =~ s/\"//g;
-					$fields[2] =~ s/\"//g;
-					$fields[6] =~ s/\"//g;
-					$fields[7] =~ s/\"//g;
-				} else {
-				@fields = split /,/,$line;
-				} #end if
-				### bracket check OK - 313 
-
-				### bracket check
-				if($eds_keys{$fields[0]}){
-					$inst_code = $eds_keys{$fields[0]};
-					if (($inst_code =~ /S905/) | ($inst_code =~ /GALIL/) | ($inst_code =~ /AUGUS/)){
-						print DEBUG $line."\n";
-					}
-
-					#if($last_inst eq ""){
-					#	$last_inst=$inst_code;
-					#} #end if 
-					$out_line_head = "m".$date." ".$inst_code." E ";
-					if(($ebsco_profiles{$fields[2]}) && 
-					   ($fields[6]>0)){
-						$profile = $ebsco_profiles{$fields[2]};
-
-						$sessions_count = $fields[6];
-						$out_line_tail = "A " . $profile . " " .$sessions_count ."\n";
-						$out_line = $out_line_head . $out_line_tail;
-						#print "out_line=$out_line\n";
-						if (($inst_code ne "PUBL") && ($profile ne "ZBDS")){
-							print SESSIONS $out_line;
-						} #end if
-					} #end if
-					if(($ebsco_profiles{$fields[2]}) && 
-					   ($fields[7]>0)){
-						$profile = $ebsco_profiles{$fields[2]};
-						$searches_count = $fields[7];
-						$out_line_tail = "S " . $profile . " ".$searches_count ."\n";
-						$out_line = $out_line_head . $out_line_tail;
-						#print"out_line=$out_line\n";
-						if (($inst_code ne "PUBL") && ($profile ne "ZBDS")){
-							print SEARCHES $out_line;
-						} #end if
-					} #end if
-					if(!($ebsco_profiles{$fields[2]}) && 
-					   ($fields[6]>0) && ($fields[2] ne "EHOST")){
-						#$temp_sessions_total = $fields[6];
-						#$sessions_total = $sessions_total + $temp_sessions_total;
-						$sessions_count = $fields[6];
-						$out_line_tail = "A ZBDS " .$sessions_count ."\n";
-						$out_line = $out_line_head . $out_line_tail;
-						#print "out_line=$out_line\n";
-						if ($inst_code ne "PUBL"){
-							print SESSIONS $out_line;
-						} #end if
-					} #end if
-					if(!($ebsco_profiles{$fields[2]}) && 
-					   ($fields[7]>0) && ($fields[2] ne "EHOST")){
-						$searches_count = $fields[7];
-						$out_line_tail = "S ZBDS ".$searches_count ."\n";
-						$out_line = $out_line_head . $out_line_tail;
-						#print"out_line=$out_line\n";
-						if ($inst_code ne "PUBL"){
-							print SEARCHES $out_line;
-						} #end if	
-						#$temp_searches_total = $fields[7];
-						#$searches_total = $searches_total + $temp_searches_total;
-					} #end if
-				$last_inst=$inst_code;	
-				$sessions_count=0;
-				$searches_count=0;
-				}#end if	
-				### bracket check OK
-			} #end while lines of data in file to process
-			### bracket check OK	
-
-		} elsif (($file_name =~ /eHost_/) || ($file_name =~ /EBSCO_Usage_/)){
-		#??#exit;
-			if($file_name =~ /eHost_Searches/){
-				$array_var=3;
-			} else {
-				$array_var=1;
-			} #end if
-			$date = $file_name;
-			$date =~ s/EBSCO_Usage_//;
-			$date =~ s/eHost_Full-Text_Citations_//;
-			$date =~ s/eHost_Searches_Sessions_//;
-			$date =~ s/.csv//;
-			$date =~ s/.CSV//;
-			#$date = "m".$date;
-			open(LOGFILE,">>$log_file");
-			open(ORPHANS,">>$orphan_file");
-			#open(DEBUG,">$debug_file");
-			open(INFILE,"$file");
-			#??#print"line 356 opened $file\n";
-
-			while(<INFILE>) {
-				$line = $_;
-				$inst_defined=0;
-				$inst_code="";
-				$db_code="";
-				if($line =~ /Library, Information Science/){
-					$line=~s/Library, Information/Library - Information/;
-				} #end if
-				if($line =~ /Garden, Landscape/){
-					$line =~ s/Garden, Landscape/Garden - Landscape/;
-				} #end if
-				### bracket check
-				if ($start) {
-					chomp($line);
-
-					if($line =~ /",/){
-						@fields = split /",/,$line;
-					} else {
-						@fields = split /,/,$line;
-					} #end if
-
-					my $field_count=@fields;	
-					#??# print"field_count=$field_count\n";
-					$fields[0] =~ s/\"//g;
-					$fields[$array_var] =~ s/\"//g;
-	  				$fields[$array_var] =~ tr/[a-z]/[A-Z]/;
-					$fields[$array_var] =~ s/ //g; 
-
-					if($file_name =~ /eHost_Searches/){
-						$fields[2] =~ s/\"//g;
-						#??#print"fields[2]=$fields[2]\n";
-					} #end if
-
-					#print"fields[3]=$fields[3]\n";	
-					## handle diacritics
-					if($line =~ /Fuente Acad/){
-						$fields[$array_var]="FUENTEACAD";
-					} #end if
-					if($line =~ /Econom/){
-						$fields[$array_var]="ECONOM";
-					} #end if
-					if($line =~ /Revistas de Investigaci/){
-						$fields[$array_var] = "REVISTASDEINVESTIGACI";
-					} #end if
-					if($line =~ /Revistas para Bibliotecas/){
-						$fields[$array_var]="REVISTASPARABIBLIOTECAS";
-					} #end if
-					if($line =~ /Salud: Informaci/){
-						$fields[$array_var] = "SALUD:INFORMACI";
-					} #end if
-					if ($line =~ /Garden - Landscape/){
-						$fields[$array_var]="GARDENLANDSCAPE";
-					} #end if
-					if (($line =~ /Library - Information Science/)
-						&& ($line !~ /Full Text/)){
-						$fields[$array_var]="LIBRARYINFORMATIONSCIENCE";
-					} elsif($line =~ /Library - Information Science/) {
-						$fields[$array_var]="LIBRARYINFORMATIONSCIENCEFULLTEXT";
-					} #end if
-					## end ifs for diacritics
-
-					if(($field_count>=6)&&($field_count<9) 
-						&& ($file_name =~ /EBSCO_Usage/)){
-						$fields[2] = int $fields[2];
-						$fields[3] = int $fields[3];
-						$fields[4] = int $fields[4];
-						$searches_count=$fields[2];
-						$fulltext_count=$fields[3];
-						$citation_count=$fields[4];
-					} elsif(($field_count==9) && 
-					($file_name =~ /EBSCO_Usage/)){
-						$fields[4] = int $fields[4];
-						$fields[5] = int $fields[5];
-						$fields[6] = int $fields[6];
-						$searches_count=$fields[4];
-						$fulltext_count=$fields[5];
-						$citation_count=$fields[6];
-					} elsif($file_name =~ /eHost_Full-Text/){
-						$fields[4] =~ s/\"//g;
-	  					$fields[4] =~ tr/[a-z]/[A-Z]/;
-						@vars = split/,/,$fields[4];
-						$fulltext_count = int $vars[0];
-						$citation_count = int $vars[1];
-						$inst_code = $vars[2];
-						chomp($inst_code);
-						if ( defined $inst_code ){
-							if ($inst_code =~ /S905/){
-								$inst_code="PUB1";
-							} elsif ($inst_code =~ /GALIL/) {
-								$inst_code="DEM4";
-							} #end if
-                                        	} elsif (defined $ehost_keys{$fields[0]}) {
-							$inst_code=$ehost_keys{$fields[0]};
-						} #end if
-						$inst_defined=1;
-						@vars=();
-					} elsif(($file_name =~ /eHost_Searches/)
-                                        	&& (($fields[2] =~ /ehost/)
-						|| ($fields[2] =~ /chc/)
-						|| ($fields[2] =~ /autorefctr/)
-						|| ($fields[2] =~ /gkr/)
-						|| ($fields[2] =~ /novelist/)
-						|| ($fields[2] =~ /novelistk8/)
-						|| ($fields[2] =~ /novplus/)
-						|| ($fields[2] =~ /novpk8/))){
-						$fields[6] =~ s/\"//g;
-	  					$fields[6] =~ tr/[a-z]/[A-Z]/;
-						@vars = split/,/,$fields[6];
-						$sessions_count = int $vars[0];
-						$searches_count = int $vars[1];
-						$inst_code = $vars[2];
-						#chomp($inst_code);
-						if ( defined $inst_code ){
-							if ($inst_code =~ /S905/){
-								$inst_code="PUB1";
-							} elsif ($inst_code =~ /GALIL/) {
-								$inst_code="DEM4";
-							} #end if 
-                                        	} elsif (defined $ehost_keys{$fields[0]}) {
-							$inst_code=$ehost_keys{$fields[0]};
-						} #end if
-						$inst_defined=1;
-						@vars=();
- 					} #end if
-
-					if ((defined $fields[7]) && ($fields[7]=~m/[a-zA-Z]/) && (!($inst_defined))) {
-						$fields[7] =~ s/\"//g;
-				    		$inst_code = $fields[7];
-				    		$inst_defined=1;
-					} #end if
-					if ((defined $fields[6]) && (!($inst_defined)) && ($fields[6]=~m/[a-zA-Z]/)) {
-						$fields[6] =~ s/\"//g;
-				    		$inst_code = $fields[6];
-				    		$inst_defined=1;
-					} #end if
-					if ((defined $fields[5]) && (!($inst_defined)) && ($fields[5]=~m/[a-zA-Z]/)) {
-						$fields[5] =~ s/\"//g;
-						$inst_code=$fields[5];
-					} #end if
-					$size = length($inst_code);
-					if (($size > 4) && (($inst_code ne "s3861631") &&
-						($inst_code ne "s9426913") && 
-						($inst_code ne "s9438553") &&
-						($inst_code ne "s9052584") &&
-						($inst_code ne "1-Aug")    &&
-						($inst_code ne "galileo")))
-					{ 
-						if (($inst_code =~ /S905/) || ($inst_code =~ /GALIL/) || ($inst_code =~ /AUGUS/)){
-							print DEBUG $line."\n";
-						}
-						chop($inst_code);
-					} else {
-						print ORPHANS $line;
-						#chomp($inst_code);
-					} #end if
-
-					if ($line =~ /LUTHER/) {
-		  				$inst_code="lrb1";
-					} elsif ($line =~ /HERZING COLLEGE/) {
-		  				$inst_code="her1";
-					} elsif ($line =~ /HERZING UNIVERSITY - ATLANTA/) {
-		  				$inst_code="her1";
-					} elsif ($line =~ /ACADEMY OF THE OAKS/) {
-		  				$inst_code="psao";
-					} elsif ($line =~ /ALPHARETTA METHODIST CHRISTIAN/){
-		   				$inst_code="psal";
-					} elsif ($line =~ /ATLANTA GIRLS SCHOOL/){
-		   				$inst_code="psat";
-					} elsif ($line =~ /ATLANTA INTL/){
-		   				$inst_code="psai";
-					} elsif ($line =~ /ART INSTITUTE OF ATLANTA DECATUR CAMPUS/){
-		   				$inst_code="aia2";
-					} elsif ($line =~ /AUGUSTA PREP/){
-		   				$inst_code="psap";
-					} elsif ($line =~ /BLESSED TRINITY/){
-		   				$inst_code="psbt";
-					} elsif ($line =~ /BRANDON HALL/){
-		   				$inst_code="psbh";
-					} elsif ($line =~ /BRENTWOOD SCHOOL/){
-		   				$inst_code="psbs";
-					} elsif ($line =~ /BROOKSTONE SCHOOL/){
-		   				$inst_code="psbr";
-					} elsif ($line =~ /CALVARY CHRISTIAN/){
-		   				$inst_code="pscc";
-					} elsif ($line =~ /CHRYSALIS EXPERIENTIAL/){
-		   				$inst_code="psch";
-					} elsif ($line =~ /GREATER CLARKS HILL REGIONAL LIBRARY SYSTEM/){
-		   				$inst_code="gchr";
-					} elsif ($line =~ /DEERFIELD WINDSOR/){
-		   				$inst_code="psdw";
-					} elsif ($line =~ /EPISCOPAL DAY/){
-		   				$inst_code="psed";
-					} elsif ($line =~ /FIRST PRESBYTERIAN/){
-		   				$inst_code="psfp";
-					} elsif ($line =~ /FREDERICA ACADEMY/){
-		   				$inst_code="psfa";
-					} elsif ($line =~ /HOLY SPIRIT PREPARATORY/){
-		   				$inst_code="pshs";
-					} elsif ($line =~ /LAKEVIEW ACADEMY/){
-		   				$inst_code="psla";
-					} elsif ($line =~ /MEMORIAL DAY SCHOOL/){
-		   				$inst_code="psme";
-					} elsif ($line =~ /MT PISGAH CHRISTIAN/){
-		   				$inst_code="psmp";
-					} elsif ($line =~ /MT VERNON PRESBYTERIAN/){
-		   				$inst_code="psmv";
-					} elsif ($line =~ /NORTH COBB CHRISTIAN/){
-		   				$inst_code="psnc";
-					} elsif ($line =~ /OAK MOUNTAIN/){
-		   				$inst_code="psom";
-					} elsif ($line =~ /OUR LADY OF MERCY/){
-		   				$inst_code="psol";
-					} elsif ($line =~ /PIEDMONT ACADEMY/){
-		   				$inst_code="pspi";
-					} elsif ($line =~ /RABUN GAP-NACOOCHEE/){
-		   				$inst_code="psrg";
-					} elsif ($line =~ /SARA HIGHTOWER REG LIBRARY/){
-		   				$inst_code="sar1";
-					} elsif ($line =~ /ST JOHN THE EVANGELIST/){
-		   				$inst_code="pssj";
-					} elsif ($line =~ /SHERWOOD CHRISTIAN/){
-		   				$inst_code="pssh";
-					} elsif ($line =~ /SOUTHERN CRESCENT TECHNICAL COLLEGE/){
-		   				$inst_code="scre";
-					} elsif ($line =~ /SOUTHWEST GEORGIA ACADEMY/){
-		   				$inst_code="pssg";
-					} elsif ($line =~ /ST ANDREWS/){
-		   				$inst_code="pssa";
-					} elsif ($line =~ /ST. VINCENTS ACADEMY/){
-		   				$inst_code="pssv";
-					} elsif ($line =~ /THE HOWARD SCHOOL/){
-		   				$inst_code="pshw";
-					} elsif ($line =~ /VALWOOD SCHOOL/){
-		   				$inst_code="psvs";
-					} elsif ($line =~ /WESTFIELD SCHOOL/){
-		   				$inst_code="psws";
-					} elsif ($line =~ /WESTMINSTER OF AUGUSTA/){
-		   				$inst_code="pswa";
-					} elsif ($line =~ /GEORGIA NORTHWESTERN TECHNICAL COLLEGE/){
-		   				$inst_code="gnt1";
-					} elsif ($line =~ /WORTH COUNTY SYLVESTER LIBRARY/){
-		   				$inst_code="wor1";
-					} elsif ($line =~ /WORTH COUNTY PUBLIC LIBRARY/){
-		   				$inst_code="wor1";
-					} elsif ($line =~ /COWETA COUNTY LIBRARY/){
-		   				$inst_code="cwl1";
-					} elsif ($line =~ /COWETA PUBLIC LIBRARY SYSTEM/){
-		   				$inst_code="cwl1";
-					} elsif ($line =~ /THE WEBER SCHOOL/){
-		   				$inst_code="pswb";
-					} elsif ($line =~ /TALLULAH FALLS SCHOOL/){
-		   				$inst_code="pstf";
-					} elsif ($line =~ /ST MARTINS EPISCOPAL SCHOOL/){
-		   				$inst_code="pssm";
-					} elsif ($line =~ /PROVIDENCE CHRISTIAN ACADEMY/){
-		   				$inst_code="pspc";
-					} elsif ($line =~ /MONSIGNOR DONOVAN CATHOLIC HIGH SCHOOL/){
-		   				$inst_code="psmd";
-					} elsif ($line =~ /CHRISTIAN HERITAGE SCHOOL/){
-		   				$inst_code="pscr";
-					} elsif ($line =~ /HERITAGE SCHOOL/){
-		   				$inst_code="pshe";
-					} elsif ($line =~ /FIRST PRESBYTERIAN DAY SCHOOL/){
-		   				$inst_code="psfp";
-					} elsif ($line =~ /DARLINGTON SCHOOL/){
-		   				$inst_code="psda";
-					} elsif ($line =~ /HOPE SCHOOLS OF EXCELLENCE/){
-		   				$inst_code="psho";
-					} elsif ($line =~ /MILL SPRINGS ACADEMY/){
-		   				$inst_code="psms";
-					} elsif ($line =~ /MONROE ACADEMY/){
-		   				$inst_code="psma";
-					} elsif ($line =~ /STRATFORD ACADEMY/){
-		   				$inst_code="pstr";
-					} elsif ($line =~ /STRONG ROCK CHRISTIAN SCHOOL/){
-		   				$inst_code="psrc";
-					} elsif ($line =~ /TRINITY CHRISTIAN SCHOOL/){
-		   				$inst_code="pstc";
-					} elsif ($line =~ /SOUTHERN CATHOLIC COLLEGE/){
-		   				$inst_code="scc1";
-					} elsif ($line =~ /BEULAH HEIGHTS BIBLE COLLEGE/){
-		   				$inst_code="bhu1";
-					} elsif ($line =~ /BEULAH HEIGHTS UNIV/){
-		   				$inst_code="bhu1";
-					} elsif ($line =~ /WIREGRASS GEORGIA TECHNICAL COLLEGE/){
-		   				$inst_code="wrgt";
-					} elsif ($line =~ /HARVESTER CHRISTIAN ACADEMY/){
-		   				$inst_code="pshc";
-					} elsif ($line =~ /WHITEFIELD ACADEMY/){
-		   				$inst_code="pswf";
-					} elsif ($line =~ /MT VERNON PRESBYTERIAN SCHOOL/){
-		   				$inst_code="psmv";
-					} elsif ($line =~ /OCONEE FALL LINE TECHNICAL COLLEGE/){
-		   				$inst_code="oftc";
-					} elsif ($line =~ /GEORGIA VIRTUAL SCHOOL/){
-		   				$inst_code="sgvh";
-					} elsif ($line =~ /MARSHES OF GLYNN LIBRARIES/){
-		   				$inst_code="mgl1";
-					} elsif ($line =~ /SOUTHERN REGIONAL EDUCATION BOARD/){
-		   				$inst_code="sre1";
-					} elsif ($line =~ /TATTNALL SQUARE ACADEMY/){
-		   				$inst_code="psts";
-					} elsif ($line =~ /WALKER SCHOOL/){
-		   				$inst_code="pswl";
-					} elsif ($line =~ /WARREN COUNTY SCHOOLS/){
-		   				$inst_code="swar";
-					} elsif ($line =~ /UNIV OF NORTH GEORGIA/){
-		   				$inst_code="nga1";
-					} elsif ($line =~ /MIDDLE GEORGIA STATE COLLEGE/){
-		   				$inst_code="mga1";
-					} elsif ($line =~ /SOUTH GEORGIA STATE COLLEGE/){
-		   				$inst_code="sga1";
-					#} elsif (($line =~ /GEORGIA REGENTS UNIVERSITY/) && 
-                         		#	(($date > 201306) && ($date < 201602))){
-		   			#	$inst_code="reg1";
-                			} elsif ($line =~ /AUGUSTA UNIVERSITY/){
-                   				$inst_code="reg1";
-                			} elsif ($line =~ /THE ATLANTA ACADEMY/){
-                   				$inst_code="psac";
-                			} elsif ($line =~ /BETHESDA SCHOOL/){
-                   				$inst_code="psbe";
-                			} elsif ($line =~ /CORNERSTONE CHRISTIAN ACADEMY/){
-                   				$inst_code="psco";
-                			} elsif ($line =~ /FURTAH PREPARATORY SCHOOL/){
-                   				$inst_code="psfu";
-                			} elsif ($line =~ /WESTMINSTER CHRISTIAN ACADEMY/){
-                   				$inst_code="pswe";
-                			} elsif ($line =~ /SOLID ROCK ACADEMY/){
-                   				$inst_code="pssr";
-                			} elsif ($line =~ /HANCOCK DAY SCHOOL/){
-                   				$inst_code="psha";
-                			} elsif ($line =~ /PIEDMONT SCHOOL OF ATLANTA/){
-                   				$inst_code="pspd";
-					}#end if for data without inst codes
-					$inst_code =~ tr /a-z/A-Z/;
-					$inst_code =~ s/ //g;
-					chomp($inst_code);
-					if ($inst_code ne "") {
-						if (exists($special_inst_codes{$inst_code})) {
-							$inst_code = $special_inst_codes{$inst_code};
-						} #end if
-					} #end if
-                        		#if($date > 201306){
-                        			if(($inst_code eq "NGC1")||($inst_code eq "GAI1")){
-                          				$inst_code="NGA1";
-                        			}#end if
-                        			if(($inst_code eq "MAC1")||($inst_code eq "MGC1")){
-                          				$inst_code="MGA1";
-                        			}#end if
-                        			if(($inst_code eq "SGC1")||($inst_code eq "WAY1")){
-                          				$inst_code="SGA1";
-                        			}#end if
-                        			#if(($inst_code eq "AUG1")||($inst_code eq "MED1")){
-                          			#	$inst_code="REG1";
-                        			#}#end if
-                        			if($inst_code eq "NEW2"){
-                          				$inst_code="CWL1";
-                        			}#end if
-                        			if($inst_code eq "BBRA"){
-                          				$inst_code="MGL1";
-                        			}#end if
-						chomp($inst_code);
-						#$inst_code = "*".$inst_code."*";
-						if ($inst_code ne ""){
-	   						$out_line_head = "m".$date . " " . $inst_code . " " . "E ";
-						}
-					#} else {
-			      		#	$out_line_head = "m".$date . " " . $inst_code . " " . "E ";
-					#}#end if
-
-					if (($inst_code eq "ARMY") && ($fields[$array_var] eq "Funk & Wagnalls New World Encyclopedia")){
-						$ebsco_titles{$fields[$array_var]} = "ZBFU";
-					} elsif (($inst_code eq "ARMY") && ($fields[$array_var] eq "EBSCO Animals")) {
-						$ebsco_titles{$fields[$array_var]} = "ZBEA";
-					} elsif ($fields[$array_var] eq "Funk & Wagnalls New World Encyclopedia") {
-						$ebsco_titles{$fields[$array_var]} = "ZBFW";
-					} elsif ($fields[$array_var] eq "EBSCO Animals") {
-						$ebsco_titles{$fields[$array_var]} = "ZPEA";
-					} #end if
-
-					if (($searches_count > 0) && (defined $ebsco_titles{$fields[$array_var]})
-					&& (($fields[2]=~/ehost/)
-					|| ($fields[2]=~/chc/)
-					|| ($fields[2]=~/autorefctr/)
-					|| ($fields[2]=~/gkr/)
-					|| ($fields[2]=~/novelist/)
-					|| ($fields[2]=~/novelistk8/)
-					|| ($fields[2]=~/novplus/)
-					|| ($fields[2]=~/novpk8/))
-					&& (($file_name =~ /EBSCO_Usage/) || ($file_name =~ /eHost_Searches/))) {
-						$out_line_tail = "S" . " " . $ebsco_titles{$fields[$array_var]} . " " . $searches_count . "\n";
-						$searches_total += $searches_count;
-
-						if ($inst_code eq "PUBL"){
-							if ($ebsco_titles{$fields[$array_var]} eq "GAKR"){
-								$out_line = $out_line_head . $out_line_tail;
-							} #end if
-						} else {
-							$out_line = $out_line_head . $out_line_tail;
-						}# end if
-						#$out_line = $out_line_head . $out_line_tail;
-						#print"searches outline=$out_line\n";
-						print SEARCHES $out_line;
-						$out_line_tail="";
-						$out_line ="";
-						$searches_count=0;
-					} #end if
-
-					if (($sessions_count > 0) && (defined $ebsco_titles{$fields[$array_var]})
-					&& (($fields[2]=~/ehost/)
-					|| ($fields[2]=~/chc/)
-					|| ($fields[2]=~/autorefctr/)
-					|| ($fields[2]=~/gkr/)
-					|| ($fields[2]=~/novelist/)
-					|| ($fields[2]=~/novelistk8/)
-					|| ($fields[2]=~/novplus/)
-					|| ($fields[2]=~/novpk8/))
-					&& (($file_name =~ /EBSCO_Usage/) || ($file_name =~ /eHost_Searches/))) {
-						$out_line_tail = "A" . " " . $ebsco_titles{$fields[$array_var]} . " " . $sessions_count . "\n";
-						$sessions_total += $sessions_count;
-
-						if ($inst_code eq "PUBL"){
-							if ($ebsco_titles{$fields[$array_var]} eq "GAKR"){
-								$out_line = $out_line_head . $out_line_tail;
-							} #end if
-						} else {
-							$out_line = $out_line_head . $out_line_tail;
-						}# end if
-						#$out_line = $out_line_head . $out_line_tail;
-						#print"session outline=$out_line\n";
-						if ($inst_code =~ /AUGUS/){
-							print DEBUG $line."\n";
-						}
-						print SESSIONS $out_line;
-						$out_line_tail="";
-						$out_line ="";
-						$sessions_count=0;
-					} #end if
-
-					if ((($citation_count > 0) && (defined $ebsco_titles{$fields[$array_var]}))
-					&& (($file_name =~ /EBSCO_Usage/) || ($file_name =~ /eHost_Full-Text/))){
-						$out_line_tail = "D" . " " . $ebsco_titles{$fields[$array_var]} . " " .$citation_count . "\n";
-						$citation_total += $citation_count;
-
-						if ($inst_code eq "PUBL"){
-							if ($ebsco_titles{$fields[$array_var]} eq "GAKR"){
-								$out_line = $out_line_head . $out_line_tail;
-							} #end if
-						} else {
-							$out_line = $out_line_head . $out_line_tail;
-						}# end if
-						#$out_line = $out_line_head . $out_line_tail;
-						#print"citation out_line=$out_line\n";
-						print CITATION $out_line;
-						$out_line_tail="";
-						$out_line ="";
-						$citation_count=0;
-					} #end if
-
-					if ((($fulltext_count > 0) && (defined $ebsco_titles{$fields[$array_var]}))
-					&& (($file_name =~ /EBSCO_Usage/) || ($file_name =~ /eHost_Full-Text/))) {
-						$out_line_tail = "F" . " " . $ebsco_titles{$fields[$array_var]} . " " . $fulltext_count . "\n";
-						$fulltext_total += $fulltext_count;
-
-						if ($inst_code eq "PUBL"){
-							if ($ebsco_titles{$fields[$array_var]} eq "GAKR"){
-								$out_line = $out_line_head . $out_line_tail;
-							} #end if
-						} else {
-							$out_line = $out_line_head . $out_line_tail;
-						}# end if
-						#$out_line = $out_line_head . $out_line_tail;
-						#print"fulltext out_line=$out_line\n";
-						print FULLTEXT $out_line;
-						$out_line_tail="";
-						$out_line ="";
-						$fulltext_count=0;
-					} #end if
-
-			if ($ebsco_textfile_build eq "yes") {
-	  			if ((defined $fields[1]) && ($fields[1] ne '')){
-		    			$fields[1] = $fields[1] . "\n";
-	    				$db_names{$fields[1]} = $fields[1];
-	  			} #end if
-	  		} #end if
-
-		} else {
-			print ORPHANS $line;
-		} #end if start
-
-			if (($line =~ /Site,Database Name,/) 
-			|| ($line =~ /Site,Group ID/)){
-				$start=1;
-			} #end if
-			if ($line =~ /Totals/) {
-				$start=0;
-			} #end if
-		} #end while
-			$start=0;
-			$searches_total=0;
-			$fulltext_total=0;
-			$citation_total=0;
-			`sort -o $temp_sessions_file $temp_sessions_file`;		
-			`sort -o $temp_searches_file $temp_searches_file`;		
-			`sort -o $temp_citation_file $temp_citation_file`;
-			`sort -o $temp_fulltext_file $temp_fulltext_file`;
-			system("gzip","$file");
-			$zip_file = $file . ".gz";
-			#system("mv","$zip_file","$archive_dir");
-		} #end if to process new format data - files with EDS
-		$file_name="";
-		@fields=();
-	} #end foreach file
-	`sort -m -o $sessions_file $sessions_file $temp_sessions_file`;
-	`sort -m -o $searches_file $searches_file $temp_searches_file`;
-	`sort -m -o $citation_file $citation_file $temp_citation_file`;
-	`sort -m -o $fulltext_file $fulltext_file $temp_fulltext_file`;
-	close(SEARCHES);
-	close(CITATION);
-	close(FULLTEXT);
-	close(SESSIONS);
-	close(INFILE);
-	close(LOGFILE);
-	close(ORPHANS);
-	close(DEBUG);
-	if ($ebsco_textfile_build eq "yes") {
-		open(OUT,">ebsco_db_names.txt");
-		my @keys = keys %db_names;
-		@keys = sort @keys;
-		foreach my $obsrv (@keys) {
-			print OUT $db_names{$obsrv};
-		} #end foreach
-		close(OUT);
-	} #end if
-	#??# debug section
-	if ($ebsco_debug eq "yes") {
-		my @keys = keys %ebsco_titles;
-		@keys = sort @keys;
-		my $dbname = $keys[3];
-		print"dbname=$dbname\n";
-		my $dbcode=$ebsco_titles{$keys[3]};
-		print"dbcode=$dbcode\n";
-		print"date=$date\n";
-	} #end if 
-	#??# end debug section
-} #end old_ebsco_stats_build
-
-
-#################################################################
 # subroutine: ebsco_stats_build
 #             new EBSCO stats report routine.
 #################################################################
 sub ebsco_stats_build {
 	$backup_file="";
-	my $archive_dir = $data_dir . "archive/ebsco_archive";
 	my $temp_searches_file = $data_dir."stats/temp_stats_monthly_ebsco_search_data";
 	my $temp_citation_file = $data_dir."stats/temp_stats_monthly_ebsco_citation_data";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_ebsco_fulltext_data";
@@ -999,7 +174,7 @@ sub ebsco_stats_build {
 	
 	my ($date,$line,$out_line,$out_line_head,$out_line_tail,
 		$inst_code,$zip_file,$file_name,$db_code,$profile,$last_inst)="";
-	my ($searches_total,$citation_total,$fulltext_total,$size,$inst_defined,$searches_count,$fulltext_count,$citation_count,$temp_sessions_total,$sessions_total,$temp_searches_total,$sessions_count,$array_var)=0;
+	my ($searches_total,$citation_total,$fulltext_total,$size,$inst_defined,$searches_count,$fulltext_count,$citation_count,$temp_sessions_total,$sessions_total,$temp_searches_total,$sessions_count)=0;
 	my $db_file = $data_dir."/stats/EBSCO_dbs.txt";
 	my $eds_academic = $data_dir."stats/EBSCO_EDS_Academic.txt";
 	my $eds_gpls_k12_priv12 = $data_dir."stats/EBSCO_EDS_GPLS_K12_Privk12.txt";
@@ -1016,9 +191,10 @@ sub ebsco_stats_build {
 	### barcket check
 	while(<INFILE>){
 	  $line=$_;
-	  @fields = split /,/,$line;   
+	  @fields = csv_split( $line );
+      #@fields = split /,/,$line;   
 	  $fields[0] =~ tr/[a-z]/[A-Z]/;
-	  $fields[1] =~ s/"//g;
+      #$fields[1] =~ s/"//g;
 	  $fields[1] =~ s/ //g;
 	  $fields[1] =~ tr/[a-z]/[A-Z]/;
 	  chomp($fields[0]);
@@ -1039,7 +215,8 @@ sub ebsco_stats_build {
 	### bracket Check
 	while(<EHOSTINST>){
 		$line=$_;
-		@fields = split /,/,$line;   
+	    @fields = csv_split( $line );
+        #@fields = split /,/,$line;   
 		$fields[0] =~ tr/[a-z]/[A-Z]/;
 		$fields[1] =~ s/ //g;
 		$fields[1] =~ tr/[a-z]/[A-Z]/;
@@ -1075,11 +252,12 @@ sub ebsco_stats_build {
 	open(EBSCOPROFILES,"$ebsco_profiles");
 	while(<EBSCOPROFILES>){ 
 		$line=$_;
-		@fields = split /,/,$line;   
+	    @fields = csv_split( $line );
+        #@fields = split /,/,$line;   
 		$fields[0] =~ tr/[a-z]/[A-Z]/;
-		$fields[0] =~ s/"//g;
+        #$fields[0] =~ s/"//g;
 		$fields[0] =~ s/ //g;
-		$fields[1] =~ s/"//g;
+        #$fields[1] =~ s/"//g;
 		$fields[1] =~ s/ //g;
 		$fields[1] =~ tr/[a-z]/[A-Z]/;
 		chomp($fields[0]);
@@ -1121,7 +299,8 @@ sub ebsco_stats_build {
 
 			while(<EDSDBFILE>){
 				$line=$_;
-				@fields = split /,/,$line;   
+	            @fields = csv_split( $line );
+                #@fields = split /,/,$line;   
 				$fields[0] =~ tr/[a-z]/[A-Z]/;
 				$fields[1] =~ s/ //g;
 				$fields[1] =~ tr/[a-z]/[A-Z]/;
@@ -1138,20 +317,12 @@ sub ebsco_stats_build {
 				#??#print"past_top=$past_top\n";
 			if($past_top){
 				#??#print"past_top=$past_top\n";
-				if($line =~ /",/){
+                #if($line =~ /",/){
 					$line =~ s/ //g;
 					$line =~ tr/[a-z]/[A-Z]/;
-					#??#print"line=$line\n";
-					@fields = split /",/,$line;
-					$fields[0] =~ s/\"//g;
-					$fields[1] =~ s/\"//g;
-					$fields[3] =~ s/\"//g;
-					$array_var=$fields[$#fields]; ## assign last element in array to array_var
-					#$array_var = $fields[9];
-					#??#print "array_var=$array_var\n";
-					@values = split /,/,$array_var;
-					@values = grep { $_ ne '' } @values; ## get rid of blank elements in array
-				} #end if
+	                @fields = csv_split( $line );
+					@values = @fields[ 9 ..$#fields ];  # historical reasons
+                #} #end if
 
 				### bracket check
 				if($eds_keys{$fields[0]}){
@@ -1205,20 +376,18 @@ sub ebsco_stats_build {
 				$searches_count=0;
 				}#end if	
 				### bracket check OK
-			} elsif ($line =~ /"Customer ID"/){
+			} elsif ($line =~ /Customer ID/){
 				$past_top=1;
 			} #end if past top
 			} #end while lines of data in file to process
 			### bracket check OK	
 
 		} elsif ($file_name =~ /eHost/){
-		#??#exit; #uncomment to test EDS harvest
 			$date = $file_name;
 			$date =~ s/eHost_Full-Text_Citations_//;
 			$date =~ s/eHost_Searches_Sessions_//;
 			$date =~ s/.csv//;
 			$date =~ s/.CSV//;
-			#$date = "m".$date;
 			$past_top=0;
 			print"opening $file_name\n";
 			open(INFILE,"$file");
@@ -1228,31 +397,17 @@ sub ebsco_stats_build {
 				$inst_defined=0;
 				$inst_code="";
 				$db_code="";
-				### bracket check
 			if ($past_top) {
 				$line =~ s/ //g;
 				$line =~ tr/[a-z]/[A-Z]/;
-				#??#print"in-line=$line\n";
-				@fields = split /",/,$line;
-				$fields[0] =~ s/\"//g;
-				$fields[1] =~ s/\"//g;
-				$fields[2] =~ s/\"//g;
-				$fields[3] =~ s/\"//g;
-				$fields[4] =~ s/\"//g;
+	            @fields = csv_split( $line );
 				if ($file_name =~ /eHost_Searches/){
-					#$array_var = $fields[9];
-					#??#print"array_var from search if=$array_var\n";
 					$db_code=$ebsco_titles{$fields[4]};
-					#??#print"db_code from search if=$db_code\n";
+				    @values = @fields[ 9 .. $#fields ];  # historical reasons
 				} else {
-					#$array_var = $fields[7];
 					$db_code=$ebsco_titles{$fields[2]};
-				} #end if				
-				$array_var=$fields[$#fields]; ## assign last element in array to array_var
-				@values = split /,/,$array_var;
-				@values = grep { $_ ne '' } @values; ## get rid of blank elements in array
-				#??#print"db_code=$db_code\n";
-				### bracket check
+				    @values = @fields[ 7 .. $#fields ];  # historical reasons
+				}
 				if(($ehost_keys{$fields[0]})
 			 	&& ($file_name =~ /eHost_Searches/)){
 					$inst_code = $ehost_keys{$fields[0]};
@@ -1323,7 +478,7 @@ sub ebsco_stats_build {
 				$fulltext_count=0;
 				$citation_count=0;
 				### bracket check OK
-			} elsif ($line =~ /"Customer ID"/){
+			} elsif ($line =~ /Customer ID/){
 				$past_top=1;
 			} #end if
 		} #end while
@@ -1335,9 +490,6 @@ sub ebsco_stats_build {
 		`sort -o $temp_searches_file $temp_searches_file`;		
 		`sort -o $temp_citation_file $temp_citation_file`;
 		`sort -o $temp_fulltext_file $temp_fulltext_file`;
-		#system("gzip","$file");
-		#$zip_file = $file . ".gz";
-		#system("mv","$zip_file","$archive_dir");
 		} #end if to process new format data - files with EDS
 		$file_name="";
 		@fields=();
@@ -1351,7 +503,6 @@ sub ebsco_stats_build {
 	close(FULLTEXT);
 	close(SESSIONS);
 	close(INFILE);
-	close(LOGFILE);
 	close(DEBUG);
 	#if ($ebsco_textfile_build eq "yes") {
 	#	open(OUT,">ebsco_db_names.txt");
@@ -1381,7 +532,6 @@ sub ebsco_stats_build {
 #################################################################
 sub proquest_stats_build {
 	my $proquest_textfile_build = @_;
-	my $archive_dir = $data_dir . "archive/proquest_archive";
 	my $temp_searches_file = $data_dir."stats/temp_stats_monthly_proquest_search_data";
 	my $temp_citation_file = $data_dir."stats/temp_stats_monthly_proquest_citation_data";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_proquest_fulltext_data";
@@ -1445,7 +595,8 @@ sub proquest_stats_build {
 	open(INST,"$inst_data");
 	while(<INST>) {
 		$line = $_;
-		@vars = split /,/, $line;
+        # @vars = split /,/, $line;
+		@vars = csv_split( $line );
 		$vars[2] =~ tr/[a-z]/[A-Z]/;
 		## added 05/07/11 ##
 		$vars[0] =~ s/ //g;
@@ -1526,7 +677,8 @@ sub proquest_stats_build {
 			if($count > 1){ ## this assumes that the first two lines areignored
 			$line = $_;
 			#@vars = split /",/, $line; # removed 4/21 due to change in data file
-			@vars = split /,/, $line;
+            # @vars = split /,/, $line;
+		    @vars = csv_split( $line );
 			$var_count = @vars;
 			for($i=0;$i<$var_count;$i++) {
 			  $value = $vars[$i];
@@ -1609,12 +761,13 @@ sub proquest_stats_build {
 			while(<INFILE>){
 				$line = $_;
 				if ($line =~ /Subtotal/){
-					@vars = split /,"/, $line;
-					$vars[0] =~	s/"//g;
-					$vars[2] =~	s/"//g;
-					$vars[4] =~	s/"//g;
-					$vars[5] =~	s/"//g;
-					chomp($vars[5]);
+		            @vars = csv_split( $line );
+                    # @vars = split /,"/, $line;
+                    # $vars[0] =~	s/"//g;
+                    # $vars[2] =~	s/"//g;
+                    # $vars[4] =~	s/"//g;
+                    # $vars[5] =~	s/"//g;
+                    # chomp($vars[5]);
 					## searches $vars[2]
 					if (($vars[2] > 0) && (defined $inst_table{$vars[0]})){
 						$temp = $date . " " . $inst_table{$vars[0]} . " P Q ZUHQ " . $vars[2] . "\n";
@@ -1650,13 +803,15 @@ sub proquest_stats_build {
 				if(($line=~/Account Subtotals/) && 
                                    ($tier_one_found)){
 					if($line=~/,"/){
-						@vars=split /,"/,$line;
-						$vars[1] =~ s/"//g;
-						$vars[2] =~ s/"//g;
-						$vars[3] =~ s/"//g;
-						$vars[4] =~ s/"//g;
+		                @vars = csv_split( $line );
+                        # @vars=split /,"/,$line;
+                        # $vars[1] =~ s/"//g;
+                        # $vars[2] =~ s/"//g;
+                        # $vars[3] =~ s/"//g;
+                        # $vars[4] =~ s/"//g;
 					} else {
-						@vars=split /,/,$line;
+		                @vars = csv_split( $line );
+                        # @vars=split /,/,$line;
 					} #end if
 					$vars[2] =~ tr/[a-z]/[A-Z]/;
 					$vars[2] =~ s/ //g;
@@ -1863,9 +1018,6 @@ sub proquest_stats_build {
 	`sort -m -o $searches_file $searches_file $temp_searches_file`;
 	`sort -m -o $citation_file $citation_file $temp_citation_file`;
 	`sort -m -o $fulltext_file $fulltext_file $temp_fulltext_file`;
-	system("gzip","$file");
-	$zip_file = $file . ".gz";
-	system("mv","$zip_file","$archive_dir");
 	$date_set=0;
 	} #end foreach
 } #end proquest_stats_build
@@ -1875,7 +1027,6 @@ sub proquest_stats_build {
 #             builds the stat files from Lexis-Nexis data
 #################################################################
 sub lexis_nexis_stats_build {
-	my $archive_dir = $data_dir . "archive/lexis_nexis_archive";
 	my $temp_searches_file = $data_dir."stats/temp_stats_monthly_lexis_nexis_search_data";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_lexis_nexis_fulltext_data";
 	my $temp_sessions_file = $data_dir."stats/temp_stats_monthly_lexis_nexis_sessions_data";
@@ -2132,9 +1283,6 @@ sub lexis_nexis_stats_build {
 		`sort -m -o $searches_file $searches_file $temp_searches_file`;
 		`sort -m -o $fulltext_file $fulltext_file $temp_fulltext_file`;
 		`sort -m -o $sessions_file $sessions_file $temp_sessions_file`;
-	#	system("gzip","$file");
-	#	$zip_file = $file . ".gz";
-	#	system("mv","$zip_file","$archive_dir");
 	} #end foreach data file
 } #end lexis_nexis_stats_build
 
@@ -2143,7 +1291,6 @@ sub lexis_nexis_stats_build {
 #             for the Enclyopedia Britannica.
 #################################################################
 sub britannica_stats_build {
-	my $archive_dir = $data_dir . "archive/britannica_archive";
 	my $temp_searches_file = $data_dir."stats/temp_stats_monthly_britannica_search_data";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_britannica_fulltext_data";
 	#my $searches_file = $data_dir."stats/stats_monthly_britannica_search_data";
@@ -2263,6 +1410,26 @@ sub britannica_stats_build {
 			"ZEUN" => "126",
 			"ZEWD" => "130");
 			@keys = keys %db_index;
+		} elsif ($date >= 201807) {
+			print"Using >= 201807 key\n";
+			%db_index=();
+			%db_index=(
+			"ZEBA" => "10",
+			"ZEEO" => "22",
+			"ZEIQ" => "26",
+			"ZELZ" => "30",
+			"ZEBO" => "50",
+			"ZEJA" => "54",
+			"ZEBM" => "66",
+			"ZEHS" => "70",
+			"ZEBK" => "78",
+			"ZEMD" => "90",
+			"ZEBD" => "114",
+			"ZEOS" => "118",
+			"ZEJU" => "122",
+			"ZEUN" => "126",
+			"ZEWD" => "130");
+			@keys = keys %db_index;
 		} #end if for new format values
 
 		$date = "m".$date;
@@ -2273,7 +1440,8 @@ sub britannica_stats_build {
 			$line = $_;
 			if ((($line =~ /\[/) || ($line =~ /\(/))
 		 && (($line =~ /SubTotals:/) || ($line =~ /Subtotals:/))){
-				@vars = split /,/,$line;
+	            @vars = csv_split( $line );
+                #@vars = split /,/,$line;
 				if($vars[0] =~ /\[/){
 					@inst_code = split /\[/,$vars[0];
 					$inst_code[1] =~ s/]//g;
@@ -2306,6 +1474,12 @@ sub britannica_stats_build {
 		      		$inst="psbt";$inst_found=1;
 				} elsif ($line =~ /Brandon Hall/){
 		      		$inst="psbh";$inst_found=1;
+				} elsif ($line =~ /George Walton Academy/){
+		      		$inst="psgw";$inst_found=1;
+				} elsif ($line =~ /Gracepoint School/){
+		      		$inst="psgs";$inst_found=1;
+				} elsif ($line =~ /Yeshiva Ohr Yisrael/){
+		      		$inst="psyy";$inst_found=1;
 				} elsif ($line =~ /Brentwood School/){
 		      		$inst="psbs";$inst_found=1;
 				} elsif ($line =~ /Calvary Christian/){
@@ -2460,12 +1634,19 @@ sub britannica_stats_build {
 		      		$inst="psbf";$inst_found=1;
 				} elsif ($line =~ /SCHENCK SCHOOL/){
 		      		$inst="pssc";$inst_found=1;
+				} elsif ($line =~ /Emory University - emu1/){
+		      		$inst="emu1";$inst_found=1;
 		    	  	} #end if
 				
 				if ($inst_found){
-					@vars = split /,/,$line;
+	                @vars = csv_split( $line );
+                    #@vars = split /,/,$line;
 					$inst =~ tr/[a-z]/[A-Z]/;
 				} #end if inst_found true
+                else {
+                    print "Inst not found\n";
+                    print $line;
+                }
 			} #end if
 			$tmp="";
 			$inst_found=0;
@@ -2510,9 +1691,6 @@ sub britannica_stats_build {
 		`sort -o $temp_fulltext_file $temp_fulltext_file`;
 		`sort -m -o $searches_file $searches_file $temp_searches_file`;
 		`sort -m -o $fulltext_file $fulltext_file $temp_fulltext_file`;
-		#system("gzip","$file");
-		#$zip_file = $file . ".gz";
-		#system("mv","$zip_file","$archive_dir");
 	} #end foreach
 } #end britannica_stats_build
 
@@ -2520,7 +1698,6 @@ sub britannica_stats_build {
 # subroutine: sirs_stats_build
 #################################################################
 sub sirs_stats_build {
-	my $archive_dir = $data_dir . "archive/sirs_archive";
 	my $temp_citation_file = $data_dir."stats/temp_stats_monthly_sirs_citation_data";
 	my $temp_keyword_search_file = $data_dir."stats/temp_stats_monthly_sirs_keyword_search_data";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_sirs_fulltext_data";
@@ -2571,7 +1748,8 @@ sub sirs_stats_build {
 	while(<ACADEM>){
 		$line=$_;
                 $line =~ s/"//g;
-		@vars = split /,/,$line;
+	    @vars = csv_split( $line );
+        #@vars = split /,/,$line;
 		$vars[1] =~ tr/[a-z]/[A-Z]/;
 		chomp($vars[1]);
 		chomp($vars[2]);
@@ -2581,7 +1759,8 @@ sub sirs_stats_build {
 	while(<K12>){
 		$line=$_;
                 $line =~ s/"//g;
-		@vars = split /,/,$line;
+	    @vars = csv_split( $line );
+        #@vars = split /,/,$line;
 		$vars[1] =~ tr/[a-z]/[A-Z]/;
 		chomp($vars[1]);
 		chomp($vars[2]);
@@ -2590,7 +1769,8 @@ sub sirs_stats_build {
 	while(<MISSING>){
 		$line=$_;
                 $line =~ s/"//g;
-		@vars = split /,/,$line;
+	    @vars = csv_split( $line );
+        #@vars = split /,/,$line;
 		$vars[2] =~ tr/[a-z]/[A-Z]/;
 		chomp($vars[0]);
 		chomp($vars[2]);
@@ -2627,7 +1807,8 @@ sub sirs_stats_build {
 			$line=$_;
                         $line =~ s/"//g;
 			if ($header_found){
-				@vars = split /,/,$line;
+	            @vars = csv_split( $line );
+                #@vars = split /,/,$line;
 				$length = @vars;
 				$inst_code = $vars[1];
 				if((exists ($inst_code_lookup{$inst_code})) && $length>=26){
@@ -2714,9 +1895,6 @@ sub sirs_stats_build {
 		`sort -m -o $fulltext_file $fulltext_file $temp_fulltext_file`;
 		`sort -m -o $citation_file $citation_file $temp_citation_file`;
 		`sort -m -o $sessions_file $sessions_file $temp_sessions_file`;
-        	system("gzip","$file");
-		$zip_file = $file . ".gz";
-		system("mv","$zip_file","$archive_dir");
 	} #end foreach @data_files
 } #end sirs_stats_build
 
@@ -2724,7 +1902,6 @@ sub sirs_stats_build {
 # subroutine: firstsearch_stats_build
 #################################################################
 sub firstsearch_stats_build {
-	my $archive_dir = $data_dir . "archive/firstsearch_archive";
 	my $temp_keyword_search_file = $data_dir."stats/temp_stats_monthly_firstsearch_keyword_search_data";
 	#my $keyword_search_file = $data_dir."stats/stats_monthly_firstsearch_keyword_search_data";
 	my $keyword_search_file = $data_dir."stats/stats_monthly_firstsearch_keyword_search_data_new";
@@ -2826,9 +2003,6 @@ sub firstsearch_stats_build {
 		close(INFILE);
 		`sort -o $temp_keyword_search_file $temp_keyword_search_file`;
 		`sort -m -o $keyword_search_file $keyword_search_file $temp_keyword_search_file`;
-		system("gzip","$file");
-		$zip_file = $file . ".gz";
-		system("mv","$zip_file","$archive_dir");
 	} #end foreach @data_files
 
 } #end firstsearch_stats_build
@@ -2838,7 +2012,6 @@ sub firstsearch_stats_build {
 # subroutine: ebrary_stats_build
 #################################################################
 sub ebrary_stats_build {
-	my $archive_dir = $data_dir . "archive/ebrary_archive";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_ebrary_fulltext_data";
 	my $fulltext_file = $data_dir."stats/stats_monthly_ebrary_fulltext_data_new";
 	my $temp_sessions_file = $data_dir."stats/temp_stats_monthly_ebrary_sessions_data";
@@ -2941,7 +2114,6 @@ sub ebrary_stats_build {
 # subroutine: ebookcentral_stats_build
 #################################################################
 sub ebookcentral_stats_build {
-	my $archive_dir = $data_dir . "archive/ebookcentral_archive";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_ebookcentral_fulltext_data";
 	my $fulltext_file = $data_dir."stats/stats_monthly_ebookcentral_fulltext_data_new";
   	my $raw_data_dir = $data_dir . "ftp/galileo_stats/ebookcentral";	
@@ -2960,11 +2132,12 @@ sub ebookcentral_stats_build {
 	open(INSTDATA,"ebookcentral_stats_institutions.txt");
 	while (<INSTDATA>) {
 		$line=$_;
-		@vars = split /",/,$line;
+	    @vars = csv_split( $line );
+        #@vars = split /",/,$line;
 		$vars[0] =~ tr/[a-z]/[A-Z]/;
 		$vars[1] =~ tr/[a-z]/[A-Z]/;
-		$vars[0] =~ s/"//g;
-		$vars[1] =~ s/"//g;
+        #$vars[0] =~ s/"//g;
+        #$vars[1] =~ s/"//g;
 		$vars[1] =~ s/ //g;
 		chomp($vars[0]);
 		chomp($vars[1]);
@@ -2988,7 +2161,8 @@ sub ebookcentral_stats_build {
 		while(<INFILE>){
 			$line=$_;
 			#print"$line\n";
-			@vars = split /,/,$line;		
+	        @vars = csv_split( $line );
+            #@vars = split /,/,$line;		
 			$vars[0] =~ tr/[a-z]/[A-Z]/;
 			$vars[0] =~ s/ //g;
 			$inst=$inst_code_lookup{$vars[0]};
@@ -3015,7 +2189,6 @@ sub ebookcentral_stats_build {
 # subroutine learning_express_stats_build
 #################################################################
 sub learning_express_stats_build{
-	my $archive_dir = $data_dir . "archive/learning_express_archive";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_learning_express_fulltext_data";
 	my $fulltext_file = $data_dir."stats/stats_monthly_learning_express_fulltext_data_new";
 	my $temp_sessions_file = $data_dir."stats/temp_stats_monthly_learning_express_sessions_data";
@@ -3051,7 +2224,8 @@ sub learning_express_stats_build{
 		open(INFILE,"$file");
 		while(<INFILE>){
 			$line = $_;
-			@vars = split /,/,$line;
+	    	@vars = csv_split( $line );
+            #@vars = split /,/,$line;
 			if($past_top){
 				$vars[3] =~ tr/[a-z]/[A-Z]/;
 				$inst = $vars[3];
@@ -3101,7 +2275,6 @@ sub learning_express_stats_build{
 #################################################################
 sub FOD_stats_build {
 	print "FOD_stats_build called\n";
-	my $archive_dir = $data_dir . "archive/films_on_demand_archive";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_films_on_demand_fulltext_data";
 	my $fulltext_file = $data_dir."stats/stats_monthly_films_on_demand_fulltext_data_new";
 	my $temp_sessions_file = $data_dir."stats/temp_stats_monthly_films_on_demand_sessions_data";
@@ -3134,8 +2307,9 @@ sub FOD_stats_build {
 	open(TECH_INST,"$tech_inst_code");
 	while(<TECH_INST>){
 		$line=$_;
-		@vars = split /,"/,$line;
-		$vars[2] =~ s/"//g;
+		@vars = csv_split( $line );
+        #@vars = split /,"/,$line;
+        #$vars[2] =~ s/"//g;
 		$vars[2] =~ tr/[a-z]/[A-Z]/;
 		$inst_code_data{$vars[0]}=$vars[2];
 	} #end while to read in Tech inst data
@@ -3145,8 +2319,9 @@ sub FOD_stats_build {
 	open(USG_INST,"$usg_inst_code");
 	while(<USG_INST>){
 		$line=$_;
-		@vars = split /,"/,$line;
-		$vars[2] =~ s/"//g;
+		@vars = csv_split( $line );
+        #@vars = split /,"/,$line;
+        #$vars[2] =~ s/"//g;
 		$vars[2] =~ tr/[a-z]/[A-Z]/;
 		$inst_code_data{$vars[0]}=$vars[2];
 	} #end while to read in Tech inst data
@@ -3180,11 +2355,12 @@ sub FOD_stats_build {
 			$line=$_;
 			if ($past_top){
 				#??# print"past top\n";
-				@vars=split /",/,$line;	
-				$vars[0] =~ s/"//g;
-				$vars[4] =~ s/"//g;
-				$vars[5] =~ s/"//g;
-				$vars[9] =~ s/"//g;
+		        @vars = csv_split( $line );
+                #@vars=split /",/,$line;	
+                #$vars[0] =~ s/"//g;
+                #$vars[4] =~ s/"//g;
+                #$vars[5] =~ s/"//g;
+                #$vars[9] =~ s/"//g;
 				if(defined($inst_code_data{$vars[0]})){
 					$inst=$inst_code_data{$vars[0]};
 					$sessions_count=$vars[4];
@@ -3234,7 +2410,6 @@ sub FOD_stats_build {
 sub tumblebooks_stats_build{
 
 	print "tumblebooks_stats_build called\n";
-	my $archive_dir = $data_dir . "archive/tumblebooks_archive";
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_tumblebooks_fulltext_data";
 	my $fulltext_file = $data_dir."stats/stats_monthly_tumblebooks_fulltext_data_new";
 	my $inst_code = $data_dir."stats/TumbleBooks_Stats_Key.csv";
@@ -3257,9 +2432,10 @@ sub tumblebooks_stats_build{
 	while(<INST>){
 		$line=$_;
 		if (!($line =~ /GALILEO Name/)){
-			@vars = split /,"/,$line;
-			$vars[1] =~ s/"//g;
-			$vars[2] =~ s/"//g;
+		    @vars = csv_split( $line );
+            #@vars = split /,"/,$line;
+            #$vars[1] =~ s/"//g;
+            #$vars[2] =~ s/"//g;
 			$vars[1] =~ tr/[a-z]/[A-Z]/;
 			$vars[2] =~ tr/[a-z]/[A-Z]/;
 			$vars[2] =~ s/ //g;
@@ -3295,7 +2471,8 @@ sub tumblebooks_stats_build{
 			$fulltext_count=0;
 			if ($past_top){
 				#??# print"past top\n";
-				@vars=split /,/,$line;	
+		        @vars = csv_split( $line );
+                #@vars=split /,/,$line;	
 				$vars[0] =~ tr/[a-z]/[A-Z]/;
 				$vars[0] =~ s/ //g;
 				if(defined($inst_code_data{$vars[0]})){
@@ -3348,9 +2525,10 @@ sub mango_stats_build{
 	open(INST,"$inst_key_file");
 	while(<INST>){
 		$line=$_;
-		@vars = split /,"/,$line;
-		$vars[0] =~ s/"//g;
-		$vars[1] =~ s/"//g;
+		@vars = csv_split( $line );
+        #@vars = split /,"/,$line;
+        #$vars[0] =~ s/"//g;
+        #$vars[1] =~ s/"//g;
 		$vars[0] =~ tr/[a-z]/[A-Z]/;
 		$vars[1] =~ tr/[a-z]/[A-Z]/;
 		$vars[0] =~ s/ //g;
@@ -3385,7 +2563,8 @@ sub mango_stats_build{
 			$sessions_count=0;
 			#if ($past_top){
 				#??# print"past top\n";
-				@vars=split /,/,$line;	
+		        @vars = csv_split( $line );
+                #@vars=split /,/,$line;	
 				$vars[0] =~ tr/[a-z]/[A-Z]/;
 				$vars[0] =~ s/ //g;
 				if(defined($inst_code_data{$vars[0]})){
@@ -3439,12 +2618,13 @@ sub galelf_stats_build{
 	open(INST,"$inst_key_file");
 	while(<INST>){
 		$line=$_;
-		@vars = split /,"/,$line;
-		$vars[0] =~ s/"//g;
-		$vars[1] =~ s/"//g;
-		$vars[2] =~ s/"//g;
-		chomp($vars[2]);
-		$vars[2] =~ s/,//g;
+		@vars = csv_split( $line );
+        #@vars = split /,"/,$line;
+        #$vars[0] =~ s/"//g;
+        #$vars[1] =~ s/"//g;
+        #$vars[2] =~ s/"//g;
+        #chomp($vars[2]);
+        #$vars[2] =~ s/,//g;
 		$vars[0] =~ tr/[a-z]/[A-Z]/;
 		$vars[2] =~ tr/[a-z]/[A-Z]/;
 		$vars[0] =~ s/ //g;
@@ -3461,25 +2641,34 @@ sub galelf_stats_build{
 		$date=$temp;
 		$temp="";
 		chomp($date);
+
 		# get date from files
-		if ($date =~ /Gale/){
+		if ($date =~ /_Gale/){
 			$date =~ s/_GaleLegalForms.csv//;
 			#$date =~ s/.csv//;
-		} else {
+		}
+        elsif ( $date =~/^Gale/ ) {
+			$date =~ s/GaleLegalForms_//;
+			$date =~ s/.csv//;
+		}
+        else {
 			print "Check file name format. Date not found.\n";
 			exit;
 		} # end if to find date
+
 		$date = "m".$date;
 		#??#print"date=$date\n";
 		open(SESSIONS, ">$temp_sessions_file");
 		open(INFILE,"$file");
 		while(<INFILE>){
 			$line=$_;
+            $line =~ s{\r\n$}{\n};
 			chomp($line);
 			$sessions_count=0;
 			if ($past_top){
 				#??# print"past top\n";
-				@vars=split /,/,$line;	
+		        @vars = csv_split( $line );
+                #@vars=split /,/,$line;	
 				$vars[0] =~ tr/[a-z]/[A-Z]/;
 				$vars[0] =~ s/ //g;
 				if(defined($inst_code_data{$vars[0]})){
@@ -3535,12 +2724,13 @@ sub tumblecloud_stats_build{
 	open(INST,"$inst_key_file");
 	while(<INST>){
 		$line=$_;
-		@vars = split /,"/,$line;
-		$vars[0] =~ s/"//g;
-		$vars[1] =~ s/"//g;
-		$vars[2] =~ s/"//g;
-		chomp($vars[2]);
-		$vars[2] =~ s/,//g;
+		@vars = csv_split( $line );
+        #@vars = split /,"/,$line;
+        #$vars[0] =~ s/"//g;
+        #$vars[1] =~ s/"//g;
+        #$vars[2] =~ s/"//g;
+        #chomp($vars[2]);
+        #$vars[2] =~ s/,//g;
 		$vars[0] =~ tr/[a-z]/[A-Z]/;
 		$vars[2] =~ tr/[a-z]/[A-Z]/;
 		$vars[0] =~ s/ //g;
@@ -3575,7 +2765,8 @@ sub tumblecloud_stats_build{
 			$fulltext_count=0;
 			if ($past_top){
 				print"past top\n";
-				@vars=split /,/,$line;	
+		        @vars = csv_split( $line );
+                #@vars=split /,/,$line;	
 				$vars[0] =~ tr/[a-z]/[A-Z]/;
 				$vars[0] =~ s/ //g;
 				if(defined($inst_code_data{$vars[0]})){
