@@ -367,3 +367,7 @@
 "1P Pioneer RESA","tpio","tpio",
 "Gwinnett County Public Library System","gwinnett","grl1",
 "1P Platinum - Schenck School","pssc",
+"1P Platinum - Brandon Hall School","psbh","psbh"
+"1P Platinum - George Walton Academy","psgw","psgw"
+"1P Platinum - Gracepoint School","psgs","psgs"
+"1P Platinum - Yeshiva Ohr Yisrael","psyy","psyy"
