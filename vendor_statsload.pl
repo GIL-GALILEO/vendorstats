@@ -1391,7 +1391,7 @@ sub britannica_stats_build {
 			"ZEBD" => "102",
 			"ZEWD" => "110");
 			@keys = keys %db_index;
-		} elsif ($date >= 201707) {
+		} elsif (($date >= 201707) && ($date <= 201806)){
 			print"Using >= 201707 key\n";
 			%db_index=();
 			%db_index=(
