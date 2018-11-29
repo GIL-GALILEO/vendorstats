@@ -398,39 +398,49 @@ sub ebsco_stats_build {
 				$inst_code="";
 				$db_code="";
 			if ($past_top) {
+
 				$line =~ s/ //g;
 				$line =~ tr/[a-z]/[A-Z]/;
-	            @fields = csv_split( $line );
-				if ($file_name =~ /eHost_Searches/){
-					$db_code=$ebsco_titles{$fields[4]};
-				    @values = @fields[ 9 .. $#fields ];  # historical reasons
-				} else {
-					$db_code=$ebsco_titles{$fields[2]};
-				    @values = @fields[ 7 .. $#fields ];  # historical reasons
+				@fields = csv_split( $line );
+
+				if ( $file_name =~ /eHost_Searches/ ) {
+					$db_code = $ebsco_titles{ $fields[4] };
+					@values = @fields[ 9 .. $#fields ];  # historical reasons
 				}
-				if(($ehost_keys{$fields[0]})
-			 	&& ($file_name =~ /eHost_Searches/)){
-					$inst_code = $ehost_keys{$fields[0]};
-					$out_line_head = "m".$date." ".$inst_code." E ";
-					#??#print"out_line_head=$out_line_head\n";
-					if(($ehost_keys{$fields[0]})
-					 && ($fields[3] =~ /(EHOST)/)
-					 && ($values[0]>0) && ($ebsco_titles{$fields[4]})){
-						$sessions_count = $values[0];
-						$out_line_tail = "A " . $db_code . " " .$sessions_count ."\n";
-						$out_line = $out_line_head . $out_line_tail;
-						#??#print "out_line=$out_line\n";
-						print SESSIONS $out_line;
-					} #end if
-					if(($ehost_keys{$fields[0]})
-					 && ($fields[3] =~ /(EHOST)/) 
-					 && ($values[1]>0) && ($ebsco_titles{$fields[4]})){
-						$searches_count = $values[1];
-						$out_line_tail = "S " . $db_code . " ".$searches_count ."\n";
-						$out_line = $out_line_head . $out_line_tail;
-						#??#print"out_line=$out_line\n";
-						print SEARCHES $out_line;
-					} #end if
+				else {
+					$db_code = $ebsco_titles{ $fields[2] };
+					@values = @fields[ 7 .. $#fields ];  # historical reasons
+				}
+
+				$inst_code = $ehost_keys{ $fields[0] };
+				if( $inst_code && $file_name =~ /eHost_Searches/ ) {
+
+					$out_line_head = "m$date $inst_code E ";
+
+					if( $fields[3] =~ /ehost|novplus|novpk8/i  # profiles to match
+					&& $db_code ) {                            # recognized dbs
+
+						if( $values[0] > 0 ) {
+							$sessions_count = $values[0];
+							$out_line_tail = "A $db_code $sessions_count\n";
+							$out_line = $out_line_head . $out_line_tail;
+							print SESSIONS $out_line;
+						}
+
+						if( $values[1] > 0 ) {
+							$searches_count = $values[1];
+							$out_line_tail = "S $db_code $searches_count\n";
+							$out_line = $out_line_head . $out_line_tail;
+							print SEARCHES $out_line;
+						}
+
+					}
+
+					# note: we're inside a block where $ehost_keys{$fields[0]} is true
+					# therefore the following two blocks are (should be) noops
+					# when I have good tests, I'll remove them bmb 20181128
+					# that means I may never remove them, but I'm hopeful
+
 					if(!($ehost_keys{$fields[0]}) 
 					 &&  ($values[0]>0) && (!($ebsco_titles{$fields[4]}))
 					 && ($fields[3] =~ /(EHOST)/)){
@@ -440,6 +450,7 @@ sub ebsco_stats_build {
 						#??#print "out_line=$out_line\n";
 						print SESSIONS $out_line;
 					} #end if
+
 					if(!($ehost_keys{$fields[0]})
 					 && ($values[1]>0) && (!($ebsco_titles{$fields[4]}))
 					 && ($fields[3] =~ /(EHOST)/)){
@@ -449,10 +460,11 @@ sub ebsco_stats_build {
 						#??#print"out_line=$out_line\n";
 						print SEARCHES $out_line;
 					} #end if
-				#$last_inst=$inst_code;	
+
 				$sessions_count=0;
 				$searches_count=0;
-				} elsif($file_name =~ /eHost_Full/){
+				}
+				elsif($file_name =~ /eHost_Full/){
 					if ($ehost_keys{$fields[0]}){
 						$inst_code = $ehost_keys{$fields[0]};
 						$out_line_head = "m".$date." ".$inst_code." E ";
