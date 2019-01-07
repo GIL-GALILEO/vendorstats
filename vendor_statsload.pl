@@ -1657,7 +1657,7 @@ sub britannica_stats_build {
 				} #end if inst_found true
                 else {
                     print "Inst not found\n";
-                    print $line;
+		    # print $line;
                 }
 			} #end if
 			$tmp="";
