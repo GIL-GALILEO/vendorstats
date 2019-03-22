@@ -2180,15 +2180,14 @@ sub ebookcentral_stats_build {
 			$inst=$inst_code_lookup{$vars[0]};
 			$fulltext_count=$vars[1];
 			chomp($fulltext_count);
-			if ($fulltext_count > 0){
+			if( $inst and ( $fulltext_count > 0 ) ){
 				$line_out = $date . " " . $inst . " Y F EBCN " . $fulltext_count . "\n";
-				#??#print"line printed to FULLTEXT=$line_out\n";
 				print FULLTEXT $line_out;
 				$fulltext_count=0;
-			} #end if	
+			}
 			@vars=();
 			$fulltext_count=0;
-		} #end while
+		}
 		close(INFILE);
 		close(FULLTEXT);
 		`sort -o $temp_fulltext_file $temp_fulltext_file`;
