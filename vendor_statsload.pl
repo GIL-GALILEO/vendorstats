@@ -417,7 +417,7 @@ sub ebsco_stats_build {
 
 					$out_line_head = "m$date $inst_code E ";
 
-					if( $fields[3] =~ /ehost|novplus|novpk8/i  # profiles to match
+					if( $fields[3] =~ /\((ehost|novplus|novpk8|plus)\)/i  # profiles to match (ehost) (novplus) (novpk8) (plus)
 					&& $db_code ) {                            # recognized dbs
 
 						if( $values[0] > 0 ) {
@@ -2368,16 +2368,11 @@ sub FOD_stats_build {
 			if ($past_top){
 				#??# print"past top\n";
 		        @vars = csv_split( $line );
-                #@vars=split /",/,$line;	
-                #$vars[0] =~ s/"//g;
-                #$vars[4] =~ s/"//g;
-                #$vars[5] =~ s/"//g;
-                #$vars[9] =~ s/"//g;
 				if(defined($inst_code_data{$vars[0]})){
 					$inst=$inst_code_data{$vars[0]};
-					$sessions_count=$vars[4];
-					$fulltext_count=$vars[5];
-					$searches_count=$vars[9];
+					$sessions_count=$vars[2];
+					$searches_count=$vars[3];
+					$fulltext_count=$vars[4];
 					if($sessions_count>0){
 						$line_out=$date." ".$inst. " C A ZFOD ".$sessions_count."\n";
 						print SESSIONS $line_out;
