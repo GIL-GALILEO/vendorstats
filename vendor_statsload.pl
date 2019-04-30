@@ -2196,51 +2196,66 @@ sub ebookcentral_stats_build {
 	} #end foreach file
 } #end ebookcentral_stats_build
 
-#################################################################
-# subroutine learning_express_stats_build
-#################################################################
-sub learning_express_stats_build{
+#---------------------------------------------------------------------
+sub learning_express_stats_build {
 	my $temp_fulltext_file = $data_dir."stats/temp_stats_monthly_learning_express_fulltext_data";
-	my $fulltext_file = $data_dir."stats/stats_monthly_learning_express_fulltext_data_new";
+	my $fulltext_file      = $data_dir."stats/stats_monthly_learning_express_fulltext_data_new";
 	my $temp_sessions_file = $data_dir."stats/temp_stats_monthly_learning_express_sessions_data";
-	my $sessions_file = $data_dir."stats/stats_monthly_learning_express_sessions_data_new";
-	my($file,$temp,$date,$inst,$line,$line_out)="";
-	my ($past_top,$fulltext_total,$fulltext_count,$session_count)=0;
+	my $sessions_file      = $data_dir."stats/stats_monthly_learning_express_sessions_data_new";
+	my ( $file, $temp, $date, $instcode, $line, $line_out )            = "";
+	my ( $past_top, $fulltext_total, $fulltext_count, $session_count ) = 0;
 
   	my $raw_data_dir = $data_dir . "ftp/galileo_stats/learning_express";	
 	my @data_files = <$raw_data_dir/*>;
-	my @vars=();
+	my @vars = ();
 	
 	### Make back ups of old datafiles ###
-    	if ((-e $fulltext_file) && (!($opt_n))) {
-		system("$makebak","$fulltext_file");
-	} #end if
-    	if ((-e $sessions_file) && (!($opt_n))){
-		system("$makebak","$sessions_file");
-	} #end if
+    if ( (-e $fulltext_file) && (!($opt_n)) ) {
+		system( "$makebak", "$fulltext_file" );
+	}
+    if ( (-e $sessions_file) && (!($opt_n)) ){
+		system( "$makebak", "$sessions_file" );
+	}
 
-	foreach $file(@data_files){
+    my %instcode_lookup;
+    my $instcode_lookup_file = $data_dir."stats/learningexpress_lookup_table.csv";
+    open my $fh, '<', $instcode_lookup_file or die "Can't open $instcode_lookup_file: $!";
+    my $headers = <$fh>;  # skip
+    while(<$fh>){
+        my( $name, $code ) = csv_split( $_ );
+        $instcode_lookup{ $name } = $code;
+    }
+    close $fh;
+
+	foreach $file( @data_files ) {
 
 		$temp = $file;
 		$temp =~ s/\/ss\/dbs\/stats\/ftp\/galileo_stats\/learning_express\///;
-		print"loading data from $temp\n";
-		$date=$temp;
-		$temp="";
-		chomp($date);
+		print "loading data from $temp\n";
+		$date = $temp;
+		$temp = "";
+		chomp( $date );
 		$date =~ s/LearningExpress_Detailed_Usage_Report_Table_//;
 		$date =~ s/.csv//;
 		$date = "m".$date;
-		open(FULLTEXT, ">$temp_fulltext_file");
-		open(SESSIONS, ">$temp_sessions_file");
-		open(INFILE,"$file");
-		while(<INFILE>){
+		open( FULLTEXT, ">$temp_fulltext_file" );
+		open( SESSIONS, ">$temp_sessions_file" );
+		open( INFILE, "$file" );
+		LINE: while( <INFILE> ){
 			$line = $_;
 	    	@vars = csv_split( $line );
-            #@vars = split /,/,$line;
 			if($past_top){
-				$vars[3] =~ tr/[a-z]/[A-Z]/;
-				$inst = $vars[3];
-				$session_count = $vars[5];
+                my $name = $vars[1] || "";
+                my $code = $vars[3] || "";
+                $instcode = $instcode_lookup{ $name };
+                unless( $instcode ) {
+                    print "Skipping $name ($code)--not in lookup table\n";
+                    next LINE;
+                }
+                if( $code and $instcode and $code ne $instcode ) {
+                    print "Warning: $name ... $code ne $instcode\n";
+                }
+				$session_count  = $vars[5];
 				$fulltext_count = $vars[7];
 				$fulltext_total = $fulltext_total + $fulltext_count;
 				$fulltext_count = $vars[8];
@@ -2252,23 +2267,21 @@ sub learning_express_stats_build{
 				$fulltext_count = $vars[11];
 				$fulltext_total = $fulltext_total + $fulltext_count;
 				if ($fulltext_total > 0){
-					$line_out = $date . " " . $inst . " X F ZXLE " . $fulltext_total . "\n";
-					#print"$line_out\n";
+					$line_out = $date . " " . uc( $instcode ) . " X F ZXLE " . $fulltext_total . "\n";
 					print FULLTEXT $line_out;
 					$fulltext_total=0;
 					$fulltext_count=0;
-				} #end if
+				}
 				if ($session_count > 0){
-					$line_out = $date . " " . $inst . " X A ZXLE " . $session_count . "\n";
-					#print"$line_out\n";
+					$line_out = $date . " " . uc( $instcode ) . " X A ZXLE " . $session_count . "\n";
 					print SESSIONS $line_out;
 					$session_count=0;
-				} #end if
-			} #end if to parse file
+				}
+			}
 			if($line =~ /InstitutionName/){
 				$past_top=1;
-			} #end past first line 
-		} #end while
+			}
+		}
 		close(INFILE);
 		close(FULLTEXT);
 		close(SESSIONS);
@@ -2277,8 +2290,8 @@ sub learning_express_stats_build{
 		`sort -o $temp_sessions_file $temp_sessions_file`;
 		`sort -m -o $sessions_file $sessions_file $temp_sessions_file`;
 		$past_top=0;
-	} #end foreach
-} #end learning_express_stats_build
+	}
+}
 
 #################################################################
 # subroutine FOD_stats_build

@@ -295,7 +295,7 @@
 "1P Westminster of Augusta","pswa","pswa",
 "1P Athens Regional Library System","ath1","ath1",
 "1P Atlanta-Fulton Public Library System","afpl","afpl",
-"1P Augusta-Richmond County Public Library","ecgrl","ecgrl",
+"1P Augusta-Richmond County Public Library","ecgrl","ecg1",
 "1P Bartow County Library System","car1","car1",
 "1P Bartram Trail Regional Library System","btr1","btr1",
 "1P Brooks County Library","bcl1","bcl1",
