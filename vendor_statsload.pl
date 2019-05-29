@@ -2452,19 +2452,14 @@ sub tumblebooks_stats_build{
 		$line=$_;
 		if (!($line =~ /GALILEO Name/)){
 		    @vars = csv_split( $line );
-            #@vars = split /,"/,$line;
-            #$vars[1] =~ s/"//g;
-            #$vars[2] =~ s/"//g;
 			$vars[1] =~ tr/[a-z]/[A-Z]/;
-			$vars[2] =~ tr/[a-z]/[A-Z]/;
-			$vars[2] =~ s/ //g;
-			$inst_code_data{$vars[2]}=$vars[1];
-			#??#print"$vars[2] key for $vars[1]\n";
-		} #end if
-	} #end while to read in Tech inst data
+			$vars[3] =~ tr/[a-z]/[A-Z]/;
+			$vars[3] =~ s/ //g;
+			$inst_code_data{$vars[3]}=$vars[1];
+		}
+	}
 	close(INST);
 	@vars=();
-	#??#exit;
 
 	foreach $file(@data_files){
 		$temp = $file;
@@ -2488,37 +2483,33 @@ sub tumblebooks_stats_build{
 			$line=$_;
 			chomp($line);
 			$fulltext_count=0;
-			if ($past_top){
-				#??# print"past top\n";
+			if( $past_top ) {
 		        @vars = csv_split( $line );
-                #@vars=split /,/,$line;	
-				$vars[0] =~ tr/[a-z]/[A-Z]/;
-				$vars[0] =~ s/ //g;
-				if(defined($inst_code_data{$vars[0]})){
-					$inst=$inst_code_data{$vars[0]};
-					$fulltext_count=$vars[2];
-					#??#print"fulltext_count=$fulltext_count\n";
-					if(defined $fulltext_count){
-						if($fulltext_count>0){
+				$vars[1] =~ tr/[a-z]/[A-Z]/;
+				$vars[1] =~ s/ //g;
+				if( defined( $inst_code_data{ $vars[1] } ) ) {
+					$inst = $inst_code_data{ $vars[1] };
+					$fulltext_count = $vars[2];
+					if( defined $fulltext_count ){
+						if( $fulltext_count > 0 ) {
 							$line_out=$date." ".$inst. " T F ZTBO ".$fulltext_count."\n";
 							print FULLTEXT $line_out;
-							$line_out="";	
-						} #end if 
-					} #end if			
-				} #end if
-			} elsif( $line =~ /Library,Username/){
-				$past_top=1;
-			} #end if
-
-		} #end while	
+							$line_out = "";	
+						}
+					}
+				}
+			} elsif( $line =~ /Library,Username/ ) {
+				$past_top = 1;
+			}
+		}
 
 		close(INFILE);
 		close(FULLTEXT);
 		`sort -o $temp_fulltext_file $temp_fulltext_file`;
 		`sort -m -o $fulltext_file $fulltext_file $temp_fulltext_file`;
 		$past_top=0;
-	} #end foreach
-} #end tumblebooks_stats_build
+	}
+}
 
 #################################################################
 # subroutine mango_stats_build code: ango
@@ -2744,18 +2735,11 @@ sub tumblecloud_stats_build{
 	while(<INST>){
 		$line=$_;
 		@vars = csv_split( $line );
-        #@vars = split /,"/,$line;
-        #$vars[0] =~ s/"//g;
-        #$vars[1] =~ s/"//g;
-        #$vars[2] =~ s/"//g;
-        #chomp($vars[2]);
-        #$vars[2] =~ s/,//g;
-		$vars[0] =~ tr/[a-z]/[A-Z]/;
-		$vars[2] =~ tr/[a-z]/[A-Z]/;
-		$vars[0] =~ s/ //g;
-		$inst_code_data{$vars[0]}=$vars[2];
-		#??#print"$vars[0] key for $vars[2]\n";
-	} #end while to read in Tech inst data
+		$vars[1] =~ tr/[a-z]/[A-Z]/;  # abr1
+		$vars[2] =~ tr/[a-z]/[A-Z]/;  # abr1
+		$vars[1] =~ s/ //g;
+		$inst_code_data{ $vars[1] } = $vars[2];
+	}
 	close(INST);
 	@vars=();
 	#??#exit;
@@ -2782,15 +2766,14 @@ sub tumblecloud_stats_build{
 			$line=$_;
 			chomp($line);
 			$fulltext_count=0;
-			if ($past_top){
+			if( $past_top ){
 				print"past top\n";
 		        @vars = csv_split( $line );
-                #@vars=split /,/,$line;	
-				$vars[0] =~ tr/[a-z]/[A-Z]/;
-				$vars[0] =~ s/ //g;
-				if(defined($inst_code_data{$vars[0]})){
-					$inst=$inst_code_data{$vars[0]};
-					$fulltext_count=$vars[2];
+				$vars[1] =~ tr/[a-z]/[A-Z]/;
+				$vars[1] =~ s/ //g;
+				if( defined( $inst_code_data{ $vars[1] } ) ){
+					$inst = $inst_code_data{ $vars[1] };
+					$fulltext_count = $vars[2];
 					chomp($fulltext_count);
 					$fulltext_count =~ s/,//g;
 					print"fulltext_count=$fulltext_count\n";
@@ -2799,22 +2782,22 @@ sub tumblecloud_stats_build{
 							$line_out=$date." ".$inst. " U F ZTBC ".$fulltext_count."\n";
 							print FULLTEXT $line_out;
 							$line_out="";	
-						} #end if 
-					} #end if			
-				} #end if
+						}
+					}
+				}
 			} elsif( $line =~ /Username/){
 				$past_top=1;
-			} #end if
+			}
 
-		} #end while	
+		}
 
 		close(INFILE);
 		close(FULLTEXT);
 		`sort -o $temp_fulltext_file $temp_fulltext_file`;
 		`sort -m -o $fulltext_file $fulltext_file $temp_fulltext_file`;
 		$past_top=0;
-	} #end foreach
-} #end tumblecloud_stats_build
+	}
+}
 
 #################################################################
 # main routine
