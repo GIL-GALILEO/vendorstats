@@ -1422,7 +1422,7 @@ sub britannica_stats_build {
 			"ZEUN" => "126",
 			"ZEWD" => "130");
 			@keys = keys %db_index;
-		} elsif ($date >= 201807) {
+		} elsif (($date >= 201807) && ($date <= 201905)){
 			print"Using >= 201807 key\n";
 			%db_index=();
 			%db_index=(
@@ -1441,6 +1441,26 @@ sub britannica_stats_build {
 			"ZEJU" => "122",
 			"ZEUN" => "126",
 			"ZEWD" => "130");
+			@keys = keys %db_index;
+		} elsif ($date >= 201906){
+			print"Using >= 201906 key\n";
+			%db_index=();
+			%db_index=(
+			"ZEBA" => "2",
+			"ZEEO" => "10",
+			"ZEIQ" => "18",
+			"ZELZ" => "22",
+			"ZEPL" => "34",
+			"ZEBO" => "42",
+			"ZEJA" => "46",
+			"ZEBM" => "54",
+			"ZEHS" => "58",
+			"ZEBK" => "66",
+			"ZEMD" => "78",
+			"ZEBD" => "102",
+			"ZEOS" => "106",
+			"ZEJU" => "110",
+			"ZEUN" => "114");
 			@keys = keys %db_index;
 		} #end if for new format values
 
