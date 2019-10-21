@@ -1500,6 +1500,14 @@ sub britannica_stats_build {
 				} #end if
           			if ($line =~ /Atlanta International/){
               			$inst="psai";$inst_found=1;
+				} elsif ($line =~ /Brookwood School/){
+		      		$inst="psbk";$inst_found=1;
+				} elsif ($line =~ /Eaton Academy/){
+		      		$inst="pset";$inst_found=1;
+				} elsif ($line =~ /Cornerstone Christian Academy/){
+		      		$inst="psco";$inst_found=1;
+				} elsif ($line =~ /Episcopal Day School/){
+		      		$inst="psed";$inst_found=1;
 				} elsif ($line =~ /Augusta Preparatory/){
 		      		$inst="psap";$inst_found=1;
 				} elsif ($line =~ /Blessed Trinity/){
