@@ -1,5 +1,5 @@
 "Athens Regional Library System","ath1","Athens Regional Library System"
-"Atlanta- Fulton Public Library System","afpl","Atlanta-Fulton Public Library System"
+"Fulton Public Library System","afpl","Fulton Public Library System"
 "Augusta-Richmond County Public Library","ecg1","Augusta-Richmond County Public Library"
 "Bartow County Library System","car1","Bartow County Library System"
 "Bartram Trail Regional Library System","btr1","Bartram Trail Regional Library System"

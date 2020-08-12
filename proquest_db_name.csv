@@ -1,3 +1,26 @@
+Computer Science Database##zuco
+Computing Database##zuco
+ProQuest Computing##zuco
+Biological Science Database##zubj
+Biology Database##zubj
+ProQuest Biology Journals##zubj
+ProQuest Environmental Science Collection##zuec
+Agricultural & Environmental Science Collection##zuec
+Consumer Health Database##zufh
+Family Health Database##zufh
+ProQuest Family Health##zufh
+Healthcare Administration Database##zuhe
+Health Management Database##zuhe
+ProQuest Health Management##zuhe
+CBCA Complete##zubc
+Canadian Business & Current Affairs Database##zubc
+Latin America & Iberian Database##zula
+Latin America & Iberia Database##zula
+US Newsstream##zuuw
+U.S. Newsstream##zuuw
+Global Newsstream##zugn
+Literature Online##zulo
+Accounting, Tax & Banking Collection##zutb
 Business Dateline##zubd##Business Dateline
 Alt-Press Watch (APW)##zuap##Alt-Press Watch (APW)
 Atlanta Journal & Constitution##zuaj##Atlanta Journal & Constitution
@@ -53,18 +76,12 @@ ProQuest Platinum##zupp
 ProQuest Social Science Journals##zuss
 ProQuest Telecommunications##zute
 ProQuest Newsstand##zupn
-ProQuest Computing##zuco
 ProQuest Religion##zure
 ProQuest Military Collection##zumi
 ProQuest Research Library##zurl
-ProQuest Biology Journals##zubj
-CBCA Complete##zubc
 Canadian Newsstand Complete##zucn
 ProQuest Criminal Justice##zucj
-ProQuest Environmental Science Collection##zuec
-ProQuest Family Health##zufh
 ProQuest Health & Medical Complete##zuhm
-ProQuest Health Management##zuhe
 Literature Online - LION Access##zhlo
 OxResearch##zuox
 ProQuest Political Science##zups
@@ -72,13 +89,9 @@ ProQuest Psychology Journals##zupj
 ProQuest Science Journals##zusj
 Snapshots##zusn
 ProQuest Sociology##zuso
-Biology Database##zubj
-Computing Database##zuco
 Criminal Justice Database##zucj
 Education Database##zued
-Family Health Database##zufh
 Health & Medical Collection##zuhm
-Health Management Database##zuhe
 Library Science Database##zuls
 Los Angeles Times##zupn:los_angeles_times
 Military Database##zumi
@@ -91,7 +104,6 @@ Science Database##zusj
 Social Science Database##zuss
 Sociology Database##zuso
 Telecommunications Database##zute
-Canadian Business & Current Affairs Database##zubc
 Canadian Newsstream##zucn
 Arts & Humanities Database##zuah
 Asian & European Business Collection##zuae
@@ -102,12 +114,10 @@ East & South Asia Database##zuea
 East Europe, Central Europe Database##zuee
 India Database##zuin
 International Newsstream##zuew
-Latin America & Iberian Database##zula
 Linguistics Database##zulg
 Middle East & Africa Database##zume
 Public Health Database##zupu
 Turkey Database##zurk
-US Newsstream##zuuw
 UK & Ireland Database##zuuk
 SIRS Discoverer##zssd
 SIRS Issues Researcher##zsks

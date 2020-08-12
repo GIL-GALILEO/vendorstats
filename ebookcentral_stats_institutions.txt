@@ -16,7 +16,7 @@
 "atl1","Atlanta Metropolitan State College"
 "atlt","Atlanta Technical College"
 "auc1","Atlanta University Center Robert W. Woodruff Library"
-"afpl","Atlanta-Fulton Public Library System"
+"afpl","Fulton County Library System"
 "jmls","Atlanta's John Marshall Law School"
 "psap","Augusta Preparatory Day School"
 "aut1","Augusta Technical College"
